@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sift</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #191c24;
+  --bg-panel:  #13161e;
+  --bg-card:   #1d2030;
+  --bg-input:  #0e1018;
+  --bg-hi:     #242840;
+  --border:    #262b3c;
+  --border-hi: #333a54;
+  --accent:    #f59e0b;
+  --accent-hi: #fbbf24;
+  --accent-dim:rgba(245,158,11,.09);
+  --accent-glow:rgba(245,158,11,.22);
+  --text:      #f2f4fc;
+  --text-dim:  #c4cde4;
+  --text-muted:#8a96b8;
+  --r: 7px;
+  --t: 0.13s cubic-bezier(.4,0,.2,1);
+}
+
+html, body {
+  height: 100%; width: 100%; overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg); color: var(--text); font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══ TOPBAR ═════════════════════════════════════════════════════════ */
+.topbar {
+  height: 48px; background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 10px;
+  flex-shrink: 0; z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.logo-name {
+  font-size: 10px; font-weight: 900; letter-spacing: 4px;
+  text-transform: uppercase; color: var(--accent);
+}
+.vr { width: 1px; height: 18px; background: var(--border-hi); flex-shrink: 0; }
+.path-input {
+  flex: 1; min-width: 0; height: 32px; padding: 0 11px;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--text);
+  font-size: 12px; font-family: 'Consolas', monospace; outline: none;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+.path-input:focus { border-color: var(--border-hi); box-shadow: 0 0 0 3px var(--accent-dim); }
+.path-input::placeholder { color: var(--text-muted); font-family: 'Segoe UI', system-ui; font-size: 12px; }
+.tbtn {
+  height: 30px; padding: 0 13px; flex-shrink: 0;
+  background: transparent; border: 1px solid var(--border-hi);
+  border-radius: var(--r); color: var(--text-dim);
+  font-size: 11px; font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: border-color var(--t), color var(--t), background var(--t), box-shadow var(--t);
+  white-space: nowrap; letter-spacing: .3px;
+}
+.tbtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.tbtn:active { opacity: .7; }
+.tbtn-accent {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-dim);
+  box-shadow: 0 0 12px var(--accent-glow); font-weight: 600;
+}
+.tbtn-accent:hover { box-shadow: 0 0 20px var(--accent-glow); }
+.counter {
+  font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums;
+  flex-shrink: 0; letter-spacing: .5px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px;
+}
+.browse-wrap { display: flex; align-items: center; flex-shrink: 0; }
+.browse-btn-top {
+  height: 32px; padding: 0 16px;
+  background: var(--accent); border: 1px solid var(--accent-hi);
+  border-radius: var(--r); color: #000; font-weight: 700; font-size: 12px;
+  font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: background var(--t), box-shadow var(--t), transform var(--t);
+  box-shadow: 0 2px 12px rgba(245,158,11,.2);
+  display: flex; align-items: center; gap: 6px;
+}
+.browse-btn-top:hover { background: var(--accent-hi); box-shadow: 0 4px 22px rgba(245,158,11,.4); transform: translateY(-1px); }
+.browse-btn-top:active { transform: scale(.97); }
+@keyframes browse-pulse {
+  0%,100% { box-shadow: 0 2px 12px rgba(245,158,11,.2); }
+  50%      { box-shadow: 0 4px 28px rgba(245,158,11,.55), 0 0 50px rgba(245,158,11,.12); }
+}
+.browse-wrap.highlight .browse-btn-top { animation: browse-pulse 2.2s ease-in-out infinite; }
+
+/* ══ WORKSPACE ══════════════════════════════════════════════════════ */
+.workspace {
+  display: flex; height: calc(100vh - 48px - 28px);
+  overflow: hidden;
+}
+
+/* ══ VIEWER COLUMN (center) ══════════════════════════════════════════ */
+.viewer-col {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ══ VIEWER ═════════════════════════════════════════════════════════ */
+.viewer {
+  flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; background: var(--bg); position: relative;
+}
+.viewer img, .viewer video, .viewer audio {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+  display: block; border-radius: 3px;
+}
+.viewer video, .viewer audio { outline: none; }
+
+.nav-btn {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 88px;
+  background: rgba(25,28,36,.75); backdrop-filter: blur(18px) saturate(1.5);
+  border: 1px solid var(--border-hi); border-radius: 11px;
+  color: var(--text); font-size: 24px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 20; transition: all var(--t); user-select: none;
+  opacity: 0; /* hidden until hover near them */
+}
+.viewer:hover .nav-btn:not(:disabled) { opacity: 1; }
+.nav-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(25,28,36,.95); transform: translateY(-50%) scale(1.07); opacity: 1 !important; }
+.nav-btn:active { transform: translateY(-50%) scale(.96); }
+.nav-btn:disabled { opacity: 0 !important; cursor: default; pointer-events: none; }
+.nav-btn.prev { left: 16px; }
+.nav-btn.next { right: calc(264px + 16px); }
+
+.file-chip {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.7); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,.05); color: var(--text-dim); font-size: 10px;
+  padding: 4px 14px; border-radius: 20px;
+  white-space: nowrap; max-width: 65%; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none; letter-spacing: .3px;
+}
+
+.viewer-sort-badge {
+  position: absolute;
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px 7px 10px;
+  background: rgba(0,0,0,.72); backdrop-filter: blur(14px);
+  border: 2px solid; border-radius: 10px;
+  font-size: 13px; font-weight: 700; font-family: 'Consolas', monospace;
+  cursor: pointer; z-index: 15; user-select: none;
+  transition: filter .15s, transform .15s;
+}
+.viewer-sort-badge:hover { filter: brightness(1.25); transform: scale(1.05); }
+.viewer-sort-badge:active { transform: scale(.97); }
+.viewer-sort-badge .vsb-num {
+  width: 22px; height: 22px; border-radius: 5px; border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; background: rgba(0,0,0,.5);
+}
+.viewer-sort-badge .vsb-label { font-size: 12px; letter-spacing: .3px; }
+.viewer-sort-badge .vsb-x { font-size: 10px; opacity: .6; margin-left: 2px; }
+
+.center-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px; }
+#emptyState { position: fixed; top: 48px; left: 0; right: 0; bottom: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; z-index: 5; }
+#emptyState > * { pointer-events: auto; }
+.state-logo {
+  width: 280px; height: 186px; object-fit: cover; object-position: center top;
+  opacity: .08; margin: 0 auto; display: block;
+}
+.state-links { margin-bottom: 22px; margin-top: -12px; }
+.state-link { color: var(--accent); text-decoration: none; font-size: 12.5px; }
+.state-link:hover { text-decoration: underline; }
+.state-support { font-size: 11.5px; color: var(--text-dim); margin-top: 28px; }
+.state-filter-msg {
+  margin-top: 80px; font-size: 13px; font-weight: 600; letter-spacing: .4px;
+  color: #f87171;
+  padding: 8px 20px; border: 1.5px solid #f87171; border-radius: 8px;
+  animation: filter-flash 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes filter-flash {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(248,113,113,.5); }
+  50%       { opacity: 0.25; box-shadow: none; }
+}
+.state-title { font-size: 19px; font-weight: 300; color: var(--text-dim); margin-bottom: 8px; letter-spacing: .5px; }
+.state-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.9; }
+.state-icon { font-size: 44px; opacity: .2; margin-bottom: 14px; }
+.center-state .sort-btn { width: auto; padding: 0 22px; margin: 0 auto; }
+
+/* ══ VIDEO CONTROLS ══════════════════════════════════════════════════ */
+.viewer.video-mode { flex-direction: column; align-items: stretch; }
+.video-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0; position: relative; }
+.vcbar {
+  height: 44px; background: var(--bg-panel); border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; padding: 0 14px; flex-shrink: 0;
+}
+.vc-btn {
+  width: 28px; height: 28px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-dim); cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; justify-content: center; transition: all var(--t); flex-shrink: 0;
+}
+.vc-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.vc-seek { flex: 1; height: 3px; cursor: pointer; accent-color: var(--accent); min-width: 0; }
+.vc-time { font-size: 10.5px; color: var(--text-muted); font-family: 'Consolas', monospace; flex-shrink: 0; min-width: 34px; text-align: center; }
+
+/* ══ FILMSTRIP ═══════════════════════════════════════════════════════ */
+.filmstrip {
+  height: 76px; background: var(--bg-panel); border-top: 1px solid var(--border);
+  overflow: hidden; flex-shrink: 0; position: relative;
+  padding-right: 264px;
+}
+/* Sliding track — JS moves it left/right via `left` property */
+.fs-track {
+  display: flex; align-items: center; gap: 4px;
+  position: absolute; top: 50%; transform: translateY(-50%);
+  transition: left 0.22s cubic-bezier(.4,0,.2,1);
+  will-change: left;
+}
+/* Static center frame — always in the middle */
+.fs-cursor {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 62px; height: 62px;
+  border: 2px solid var(--accent);
+  border-radius: 7px;
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 0 16px rgba(245,158,11,.25);
+  pointer-events: none; z-index: 10;
+}
+.fs-item {
+  flex-shrink: 0; width: 58px; height: 58px;
+  border-radius: 5px; overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer; position: relative;
+  background: var(--bg-card);
+}
+.fs-item .fs-thumb, .fs-item .fs-ico { opacity: 0.45; transition: opacity var(--t); }
+.fs-item:hover .fs-thumb, .fs-item:hover .fs-ico { opacity: 0.75; }
+.fs-item.fs-active .fs-thumb, .fs-item.fs-active .fs-ico { opacity: 1; }
+.fs-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fs-ico {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.fs-badge {
+  position: absolute; bottom: 2px; right: 2px;
+  width: 15px; height: 15px; border-radius: 3px;
+  border: 1.5px solid; background: rgba(0,0,0,.75);
+  font-size: 8.5px; font-weight: 700; font-family: 'Consolas', monospace;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ══ RIGHT PANEL ════════════════════════════════════════════════════ */
+.panel-right {
+  position: fixed; right: 0; top: 48px; bottom: 28px;
+  width: 264px; z-index: 50;
+  background: var(--bg-panel); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden;
+}
+.panel-right::-webkit-scrollbar { width: 3px; }
+.panel-right::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+.rp-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.rp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.rp-label {
+  font-size: 8.5px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--text-muted);
+}
+
+/* Stats */
+.stats-row { display: flex; margin-bottom: 9px; }
+.stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.stat + .stat { border-left: 1px solid var(--border); }
+.stat-val { font-size: 20px; font-weight: 700; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
+.stat-val.accent { color: var(--accent); }
+.stat-lbl { font-size: 8.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; }
+.progress-track { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s ease; }
+
+/* Toggle buttons */
+.toggle-row { display: flex; gap: 4px; }
+.tgl-btn {
+  flex: 1; height: 26px; padding: 0;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text-dim); font-size: 11px;
+  cursor: pointer; font-family: inherit; transition: all var(--t); white-space: nowrap;
+}
+.tgl-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.tgl-btn.active { background: var(--bg-hi); border-color: var(--border-hi); color: var(--text); font-weight: 600; }
+
+/* Folder config */
+.add-folder-btn {
+  font-size: 10px; padding: 2px 8px;
+  background: var(--bg-hi); border: 1px solid var(--border-hi);
+  border-radius: 4px; color: var(--text-dim); cursor: pointer; font-family: inherit;
+  transition: all var(--t); line-height: 1.5;
+}
+.add-folder-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.add-folder-btn:disabled { opacity: .2; cursor: not-allowed; }
+#folderConfig { display: flex; flex-direction: column; gap: 6px; }
+.folder-row { display: flex; align-items: center; gap: 7px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.fname-input {
+  flex: 1; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text); font-size: 11.5px; font-family: inherit;
+  padding: 4px 8px; outline: none; transition: border-color var(--t); min-width: 0;
+}
+.fname-input:focus { border-color: var(--border-hi); }
+.kbd {
+  font-size: 9.5px; color: var(--text-muted); background: var(--bg);
+  border: 1px solid var(--border-hi); border-bottom-width: 2px; border-radius: 3px;
+  padding: 1px 5px; font-family: 'Consolas', monospace; flex-shrink: 0;
+}
+.rm-btn {
+  width: 18px; height: 18px; flex-shrink: 0; padding: 0;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 14px;
+  line-height: 1; font-family: inherit; display: flex; align-items: center; justify-content: center;
+  transition: all var(--t);
+}
+.rm-btn:hover:not(:disabled) { border-color: rgba(248,113,113,.3); color: #f87171; background: rgba(248,113,113,.07); }
+.rm-btn:disabled { opacity: .12; cursor: default; }
+
+/* ══ SORT BUTTONS ═══════════════════════════════════════════════════ */
+.sort-btns-group { display: flex; flex-direction: column; gap: 5px; }
+.sort-btn {
+  width: 100%; height: 52px;
+  display: flex; align-items: center; gap: 11px;
+  padding: 0 14px 0 10px;
+  border-radius: 8px; font-size: 12.5px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  border: 1px solid transparent; border-left-width: 3px;
+  transition: filter .12s, box-shadow .14s, transform .1s, opacity .12s;
+  white-space: nowrap; text-align: left;
+}
+.sort-btn:disabled { opacity: .18; cursor: not-allowed; pointer-events: none; }
+.sort-btn:not(:disabled):active { transform: scale(.97); box-shadow: none !important; }
+.btn-key {
+  width: 26px; height: 26px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+  border-bottom-width: 2px; border-radius: 5px;
+  font-size: 11px; font-weight: 700; font-family: 'Consolas', monospace;
+}
+.sort-btn span:last-child { flex: 1; }
+.btn-c0 { background: linear-gradient(110deg,#081a0e,#0b2015); border-color: #0f2a18; border-left-color: #4ade80; color: #4ade80; }
+.btn-c0:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(74,222,128,.18); transform: translateX(2px); }
+.btn-c1 { background: linear-gradient(110deg,#1a0808,#200b0b); border-color: #3a1010; border-left-color: #f87171; color: #f87171; }
+.btn-c1:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(248,113,113,.18); transform: translateX(2px); }
+.btn-c2 { background: linear-gradient(110deg,#08101a,#0b1420); border-color: #101e38; border-left-color: #60a5fa; color: #60a5fa; }
+.btn-c2:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(96,165,250,.18); transform: translateX(2px); }
+.btn-c3 { background: linear-gradient(110deg,#1a1008,#201408); border-color: #3a200e; border-left-color: #fbbf24; color: #fbbf24; }
+.btn-c3:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(251,191,36,.18); transform: translateX(2px); }
+.btn-c4 { background: linear-gradient(110deg,#10081a,#150b22); border-color: #22103c; border-left-color: #c084fc; color: #c084fc; }
+.btn-c4:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(192,132,252,.18); transform: translateX(2px); }
+.browse-btn {
+  background: var(--accent); border-color: var(--accent-hi); border-left-color: var(--accent-hi);
+  color: #000; font-weight: 700; height: 48px;
+  box-shadow: 0 4px 18px rgba(245,158,11,.25);
+}
+.browse-btn:not(:disabled):hover { filter: brightness(1.08); box-shadow: 0 6px 26px rgba(245,158,11,.4); transform: translateY(-1px); }
+.undo-btn {
+  width: 100%; height: 34px; margin-top: 4px;
+  background: transparent; border: 1px solid var(--border-hi);
+  border-radius: 7px; color: var(--text-dim);
+  font-size: 11.5px; font-weight: 500; letter-spacing: .2px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; font-family: inherit;
+  transition: border-color var(--t), color var(--t), background var(--t);
+}
+.undo-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.undo-btn:disabled { opacity: .2; cursor: not-allowed; }
+
+/* ══ FILTER BUTTONS ═════════════════════════════════════════════════ */
+.filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.filter-btn {
+  padding: 0 8px; height: 28px;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text-dim); font-size: 11px;
+  cursor: pointer; font-family: inherit; transition: all var(--t); white-space: nowrap;
+}
+.filter-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.filter-btn.active { background: var(--bg-hi); border-color: var(--border-hi); color: var(--text); font-weight: 600; }
+
+/* ══ SPEED BUTTONS ══════════════════════════════════════════════════ */
+.spd-row { display: flex; gap: 5px; margin-bottom: 7px; }
+.spd-btn {
+  flex: 1; height: 32px;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-dim); font-size: 12px;
+  cursor: pointer; font-family: inherit; transition: all var(--t);
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  position: relative;
+}
+.spd-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.spd-btn.active { background: var(--accent); border-color: var(--accent-hi); color: #000; font-weight: 700; }
+.spd-btn .def-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--accent); position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: none; }
+.spd-btn.is-default .def-dot { display: block; }
+.spd-btn.active .def-dot { background: #000; }
+.rp-sm-btn {
+  width: 100%; height: 26px; margin-top: 5px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text-muted); font-size: 10px;
+  cursor: pointer; font-family: inherit; transition: all var(--t); text-align: center;
+}
+.rp-sm-btn:hover { border-color: var(--border-hi); color: var(--text-dim); }
+
+/* ══ SLIDESHOW PANEL ════════════════════════════════════════════════ */
+.ss-panel { padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.ss-header { margin-bottom: 10px; }
+.ss-play-col { display: flex; gap: 5px; margin-bottom: 10px; }
+.ss-play-col .filter-btn { flex: 1; }
+.ss-speed-row { display: flex; align-items: center; gap: 6px; }
+.ss-slider { flex: 1; min-width: 0; accent-color: var(--accent); cursor: pointer; }
+.ss-num {
+  width: 42px; height: 28px; font-size: 13px; font-weight: 600;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text); text-align: center;
+  font-family: 'Consolas', monospace; outline: none; -moz-appearance: textfield; flex-shrink: 0;
+}
+.ss-num::-webkit-inner-spin-button, .ss-num::-webkit-outer-spin-button { display: none; }
+.ss-num:focus { border-color: var(--border-hi); }
+.ss-unit { font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+.ss-arrows { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+.ss-arrow {
+  width: 20px; height: 12px; padding: 0;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text-dim); cursor: pointer;
+  font-size: 8px; display: flex; align-items: center; justify-content: center; transition: all var(--t);
+}
+.ss-arrow:hover { border-color: var(--border-hi); color: var(--text); }
+
+/* ══ SHORTCUT BOX ═══════════════════════════════════════════════════ */
+.shortcut-box { padding: 12px 16px; flex-shrink: 0; }
+.sc-head { font-size: 8.5px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+#scText { display: flex; flex-direction: column; gap: 7px; }
+.sc-divider { height: 1px; background: var(--border); }
+.sc-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+.sc-key {
+  display: inline-block; font-size: 9.5px; font-weight: 700;
+  background: var(--bg); border: 1px solid var(--border-hi); border-bottom-width: 2px;
+  border-radius: 3px; padding: 1px 5px; font-family: 'Consolas', monospace;
+  color: var(--text-dim); line-height: 1.4; vertical-align: middle;
+}
+
+/* ══ MINI DEFAULT BUTTON (inline with section label) ════════════════ */
+.mini-default-btn {
+  font-size: 9px; padding: 1px 7px; height: 18px; line-height: 1;
+  background: transparent; border: 1px solid var(--border-hi);
+  border-radius: 4px; color: var(--text-muted); cursor: pointer; font-family: inherit;
+  transition: all var(--t); white-space: nowrap; flex-shrink: 0;
+}
+.mini-default-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ══ EMPTY STATE BROWSE BUTTON ══════════════════════════════════════ */
+.state-browse-btn {
+  margin-top: 48px; height: 60px; padding: 0 56px;
+  background: var(--accent); border: none;
+  border-radius: 12px; color: #000; font-weight: 800; font-size: 17px;
+  font-family: inherit; cursor: pointer; letter-spacing: .3px;
+  animation: state-pulse 2.6s ease-in-out infinite;
+  transition: transform .12s, box-shadow .12s;
+}
+.state-browse-btn:hover { transform: scale(1.06); }
+.state-browse-btn:active { transform: scale(.98); }
+@keyframes state-pulse {
+  0%,100% { box-shadow: 0 0 30px rgba(245,158,11,.45), 0 0 70px rgba(245,158,11,.12), 0 6px 20px rgba(245,158,11,.3); }
+  50%      { box-shadow: 0 0 55px rgba(245,158,11,.7), 0 0 110px rgba(245,158,11,.22), 0 8px 28px rgba(245,158,11,.5); }
+}
+
+/* ══ STATUS BAR ═════════════════════════════════════════════════════ */
+.statusbar {
+  height: 28px; background: var(--bg-panel); border-top: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 14px;
+  flex-shrink: 0; font-size: 11px; color: var(--text-muted);
+}
+.sb-progress { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.sb-track { width: 100px; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+.sb-fill { height: 100%; background: var(--accent); border-radius: 1px; transition: width .4s ease; }
+
+/* ══ GUIDE MODAL ════════════════════════════════════════════════════ */
+#guideOverlay.open { display: flex; }
+.guide-card {
+  position: relative;
+  background: var(--bg-panel); border: 1px solid var(--border-hi);
+  border-radius: 14px; padding: 36px 40px 32px;
+  width: 1240px; max-width: 96vw; max-height: 88vh;
+  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-hi) transparent;
+  box-shadow: 0 40px 100px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.02);
+}
+.guide-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; letter-spacing: .4px; }
+.guide-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+.guide-steps { display: flex; flex-direction: column; gap: 20px; }
+.guide-step { display: flex; gap: 16px; align-items: flex-start; }
+.guide-step-num {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); color: #000; font-weight: 800; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; margin-top: 1px;
+}
+.guide-step-title { font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+.guide-step-desc { font-size: 12.5px; color: var(--text-dim); line-height: 1.75; }
+.guide-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 6px 0 2px; color: var(--text-muted); font-size: 11px;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.guide-divider::before, .guide-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border-hi);
+}
+.guide-step-num-opt {
+  background: var(--bg-card) !important; color: var(--text-muted) !important;
+  border: 1px solid var(--border-hi); font-size: 8px;
+}
+.guide-mit {
+  margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);
+  font-size: 10.5px; color: var(--text-muted); line-height: 1.7; text-align: center;
+}
+.guide-step-desc kbd {
+  display: inline-block; padding: 1px 6px; border-radius: 4px;
+  background: var(--bg-card); border: 1px solid var(--border-hi);
+  font-family: 'Consolas', monospace; font-size: 11px; color: var(--text);
+}
+
+/* ══ ABOUT MODAL ════════════════════════════════════════════════════ */
+#aboutOverlay { display: none; }
+#aboutOverlay.open { display: flex; }
+.about-card {
+  position: relative;
+  background: var(--bg-panel); border: 1px solid var(--border-hi);
+  border-radius: 14px; padding: 40px 44px 36px;
+  width: 870px; max-width: 92vw; text-align: center;
+  box-shadow: 0 40px 100px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.02);
+}
+.about-close {
+  position: absolute; top: 14px; right: 16px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 15px; cursor: pointer; padding: 5px 8px;
+  border-radius: 5px; transition: all var(--t);
+}
+.about-close:hover { color: var(--text); background: var(--bg-hi); }
+.about-logo { width: 78px; height: 78px; object-fit: contain; margin: 0 auto 16px; display: block; }
+.about-appname { font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 18px; letter-spacing: .5px; }
+.about-blurb { font-size: 13px; color: var(--text-dim); line-height: 1.85; margin-bottom: 24px; }
+.about-links { display: flex; gap: 16px; justify-content: center; margin-bottom: 22px; }
+.about-fine-print { font-size: 10.5px; color: var(--text-muted); line-height: 1.65; text-align: center; }
+.about-link {
+  padding: 14px 20px;
+  background: var(--bg-card); border: 1px solid var(--accent);
+  border-radius: var(--r); color: var(--text-dim); text-decoration: none;
+  font-size: 12.5px; transition: color var(--t), background var(--t);
+}
+.about-link:hover { color: var(--accent); background: var(--accent-dim); }
+.about-nc-logo { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; width: 110px; }
+.about-nc-logo img { width: 52px; height: 52px; object-fit: contain; display: block; opacity: .35; transition: opacity var(--t); }
+.about-nc-logo:hover img { opacity: .8; }
+.about-nc-label { font-size: 12px; color: var(--text); letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+.about-link-inline { color: var(--accent); font-size: 13px; text-decoration: none; }
+.about-link-inline:hover { text-decoration: underline; }
+
+/* ══ TOAST ══════════════════════════════════════════════════════════ */
+#toast {
+  position: fixed; bottom: 46px; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--bg-hi); border: 1px solid var(--border-hi);
+  color: var(--text); font-size: 12px; padding: 7px 18px;
+  border-radius: 24px; opacity: 0; pointer-events: none; z-index: 900;
+  transition: opacity .18s, transform .18s; white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══ OFFLINE BANNER ═════════════════════════════════════════════════ */
+#offlineBanner {
+  position: fixed; inset: 0; z-index: 9999; background: var(--bg);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px; text-align: center;
+}
+#offlineBanner h2 { font-size: 18px; color: #f87171; font-weight: 400; }
+#offlineBanner p { color: var(--text-dim); font-size: 13px; line-height: 1.8; }
+code {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 8px; font-family: 'Consolas', monospace; font-size: 13px; color: var(--accent);
+}
+
+/* ══ FULLSCREEN ═════════════════════════════════════════════════════ */
+::backdrop { transition: none !important; animation: none !important; }
+:fullscreen .topbar,
+:fullscreen .panel-right,
+:fullscreen .filmstrip,
+:fullscreen .statusbar { display: none !important; }
+:fullscreen .workspace { height: 100vh; }
+:fullscreen .file-chip { display: none !important; }
+/* Nav arrows: fixed to window edges in fullscreen, shown only on mouse movement */
+:fullscreen .nav-btn { position: fixed !important; top: 50% !important; opacity: 0 !important; pointer-events: none !important; }
+:fullscreen .nav-btn.prev { left: 0 !important; right: auto !important; border-radius: 0 11px 11px 0 !important; }
+:fullscreen .nav-btn.next { right: 0 !important; left: auto !important; border-radius: 11px 0 0 11px !important; }
+:fullscreen .nav-btn.fs-nav-show:not(:disabled) { opacity: 1 !important; pointer-events: all !important; }
+</style>
+</head>
+<body>
+
+<div id="offlineBanner">
+  <div style="font-size:44px;opacity:.2">⚡</div>
+  <h2>Server Not Running</h2>
+  <p>Sift needs its Python backend to move files.<br><br>
+  Run <code>run.bat</code> or: <code>python server.py</code></p>
+</div>
+<div id="toast"></div>
+
+<!-- ── ABOUT ──────────────────────────────────────────────────────── -->
+<div id="aboutOverlay" onclick="if(event.target===this)closeAbout()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:none;align-items:center;justify-content:center;">
+  <div class="about-card">
+    <button class="about-close" onclick="closeAbout()">✕</button>
+    <img src="/logo.png" class="about-logo" alt="Sift">
+    <div class="about-appname">Sift</div>
+    <p class="about-blurb">A free media sorter for Windows, for the moment when you realize you have gigabytes of images, audio, or videos that you created sitting unsorted on your hard drive, and you just need to go through it fast and move the keepers somewhere.<br><br>It happened to me, so I built Sift.<br><br>I'm sharing it freely because I wouldn't have gotten this far without so much free support and assistance from others. No bloat, no subscription, no learning curve.<br><br>If you like my work, and only if you can afford to, my family and I would truly appreciate your support!<br><a href="https://buymeacoffee.com/nimblecloud13" target="_blank" class="about-link-inline">https://buymeacoffee.com/nimblecloud13</a><br><br>Keep creating, and have a great day!<br><br>- Nimble</p>
+    <div class="about-links">
+      <a href="https://x.com/NimbleCloud13" target="_blank" class="about-nc-logo about-link" title="NimbleCloud13 on X">
+        <span class="about-nc-label">𝕏</span>
+        <img src="/nimblecloud.png" alt="NimbleCloud">
+      </a>
+      <a href="https://github.com/nimblecloud13" target="_blank" class="about-nc-logo about-link" title="NimbleCloud on GitHub">
+        <span class="about-nc-label">GitHub</span>
+        <img src="/nimblecloud.png" alt="NimbleCloud">
+      </a>
+      <a href="https://old.reddit.com/user/Nimblecloud13/" target="_blank" class="about-nc-logo about-link" title="NimbleCloud13 on Reddit">
+        <span class="about-nc-label">Reddit</span>
+        <img src="/nimblecloud.png" alt="NimbleCloud">
+      </a>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 14px;">
+    <p class="about-fine-print">Copyright &copy; 2026 NimbleCloud13. All rights reserved. Permission is granted to use and modify this software for personal, non-commercial purposes only. You may not sell, license, sublicense, rent, or include this software or any derivative of it in any commercial product or service without explicit prior written permission from the author. Any redistribution, modified or unmodified, must retain this copyright notice and may not misrepresent the original authorship. For commercial licensing: <a href="https://x.com/NimbleCloud13" target="_blank" class="about-link-inline">x.com/NimbleCloud13</a></p>
+  </div>
+</div>
+
+<!-- ── GET STARTED GUIDE ─────────────────────────────────────────── -->
+<div id="guideOverlay" onclick="if(event.target===this)closeGuide()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9999;align-items:center;justify-content:center;">
+  <div class="guide-card">
+    <button class="about-close" onclick="closeGuide()">✕</button>
+    <div class="guide-title">Getting Started with Sift</div>
+    <div class="guide-subtitle">Sift through your media quickly — no fuss.</div>
+
+    <div class="guide-steps">
+
+      <div class="guide-step">
+        <div class="guide-step-num">1</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Open a folder</div>
+          <div class="guide-step-desc">Click <strong>Browse</strong> in the top bar or on the home screen, or paste a folder path directly into the path box and press <kbd>Enter</kbd>. Sift will scan and load all media files it finds.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">2</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Set up your sift destinations</div>
+          <div class="guide-step-desc">In the <strong>Sift Destinations</strong> panel on the right, you'll see two default folders — <em>Save</em> and <em>Delete</em>. Rename them or add up to 5 destinations using <strong>+ Add</strong>. Each destination gets a number key (1–5).</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">3</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Sift your files</div>
+          <div class="guide-step-desc">Each file is displayed one at a time. Press the number key for the destination you want (<kbd>1</kbd>, <kbd>2</kbd>, etc.) or click the button in the Sift panel. The file moves to that subfolder and Sift automatically advances to the next one.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">4</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Navigate freely</div>
+          <div class="guide-step-desc">Use the <kbd>←</kbd> <kbd>→</kbd> arrow keys, the on-screen arrows, or click any thumbnail in the filmstrip at the bottom to jump to any file. Already-sorted files show a colored badge — click it to unsort and move them back.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">5</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Undo a move</div>
+          <div class="guide-step-desc">Made a mistake? Click <strong>↩ Undo Last Move</strong> in the Sift panel, or click the badge overlay on any sifted image to unsift it individually. Files are moved back to the original folder instantly.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">6</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Filter by media type</div>
+          <div class="guide-step-desc">Use the <strong>Show</strong> buttons to limit the view to Images, Videos, Audio, or All. You can also change the list order between A→Z and Z→A from the <strong>List Order</strong> panel.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num">7</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Keyboard shortcuts</div>
+          <div class="guide-step-desc"><kbd>1</kbd>–<kbd>5</kbd> sift to destination &nbsp;·&nbsp; <kbd>←</kbd><kbd>→</kbd> navigate &nbsp;·&nbsp; <kbd>Z</kbd> undo &nbsp;·&nbsp; <kbd>B</kbd> browse &nbsp;·&nbsp; <kbd>Space</kbd> play/pause &nbsp;·&nbsp; <kbd>F</kbd> fullscreen</div>
+        </div>
+      </div>
+
+      <div class="guide-divider">
+        <span>Optional extras</span>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Slideshow mode</div>
+          <div class="guide-step-desc">Just want to enjoy your collection without sifting? Hit <strong>▶ Play</strong> in the Slideshow panel and Sift will automatically advance through your files. Adjust the interval with the seconds slider. Pair it with <strong>⛶ Full</strong> to go fullscreen for a proper gallery experience.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Fullscreen</div>
+          <div class="guide-step-desc">Press <kbd>F</kbd> or click <strong>⛶ Full</strong> to expand the current file to fill your entire screen. The sidebar, filmstrip, and top bar all hide so nothing gets in the way. Press <kbd>Escape</kbd> or <kbd>F</kbd> again to return.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Video &amp; audio playback speed</div>
+          <div class="guide-step-desc">When viewing a video or audio file, use the <strong>Playback Speed</strong> buttons (1×, 2×, 3×, 4×) to speed through footage quickly — great for scanning long clips. Click <strong>★ Set as Default</strong> to remember your preferred speed across sessions.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="guide-mit">
+      Copyright © 2026 NimbleCloud13. All rights reserved. Permission is granted to use and modify this software for personal, non-commercial purposes only. You may not sell, license, sublicense, rent, or include this software or any derivative of it in any commercial product or service without explicit prior written permission from the author. Any redistribution, modified or unmodified, must retain this copyright notice and may not misrepresent the original authorship. For commercial licensing enquiries, contact: x.com/NimbleCloud13
+</div>
+  </div>
+</div>
+
+<!-- ── TOPBAR ─────────────────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="logo">
+    <img src="logo.png" height="26" style="flex-shrink:0;display:block" alt="">
+    <div class="logo-name">Sift</div>
+  </div>
+  <div class="vr"></div>
+  <div class="browse-wrap highlight" id="browseWrap">
+    <button class="browse-btn-top" onclick="browseFolder()">📁 Browse</button>
+  </div>
+  <button class="tbtn" style="border-color:#4ade80;color:#4ade80" onclick="openGuide()">Get Started</button>
+  <button class="tbtn tbtn-accent" onclick="openAbout()">About Sift</button>
+  <input class="path-input" id="pathInput"
+         placeholder="Paste or type a folder path, then press Enter…"
+         onkeydown="if(event.key==='Enter') loadFolderFromInput()">
+  <button class="tbtn" id="btnReload" onclick="reloadFolder()" title="Re-scan folder">↺ Load</button>
+  <span id="counter" style="display:none"></span>
+</div>
+
+<!-- ── WORKSPACE ──────────────────────────────────────────────────── -->
+<div class="workspace">
+
+  <!-- CENTER: viewer + filmstrip -->
+  <div class="viewer-col">
+
+    <div class="viewer" id="viewer">
+      <div class="center-state" id="emptyState">
+        <img src="/nimblecloud.png" class="state-logo" alt="">
+        <div class="state-links">
+          <a href="https://x.com/NimbleCloud13" target="_blank" class="state-link">𝕏 @NimbleCloud13</a>
+        </div>
+        <button class="state-browse-btn" onclick="browseFolder()">📁 Browse</button>
+        <div class="state-support">Your support would mean a lot for my family</div>
+        <a href="https://buymeacoffee.com/nimblecloud13" target="_blank" class="state-link" style="font-size:12px;margin-top:4px;display:inline-block">Buy me a coffee ☕</a>
+        <div class="state-filter-msg" id="stateFilterMsg" style="display:none"></div>
+      </div>
+      <button class="nav-btn prev" id="navPrev" onclick="navigate(-1)" style="display:none">‹</button>
+      <button class="nav-btn next" id="navNext" onclick="navigate(1)"  style="display:none">›</button>
+      <div class="file-chip" id="fileChip" style="display:none"></div>
+      <div class="viewer-sort-badge" id="viewerSortBadge" style="display:none" onclick="unsortCurrent()"></div>
+    </div>
+
+    <!-- Filmstrip -->
+    <div class="filmstrip" id="filmstrip" style="display:none">
+      <div class="fs-track" id="fsTrack"></div>
+      <div class="fs-cursor"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: controls -->
+  <div class="panel-right">
+
+    <!-- Progress stats -->
+    <div class="rp-section">
+      <div class="rp-label" style="margin-bottom:9px">Progress</div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">Total</div></div>
+        <div class="stat"><div class="stat-val accent" id="statSorted">0</div><div class="stat-lbl">Sifted</div></div>
+        <div class="stat"><div class="stat-val" id="statLeft">0</div><div class="stat-lbl">Left</div></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="pFill" style="width:0%"></div></div>
+    </div>
+
+    <!-- List order -->
+    <div class="rp-section">
+      <div class="rp-head" style="margin-bottom:8px">
+        <span class="rp-label">List Order</span>
+        <button class="mini-default-btn" onclick="saveDefaultSortOrder()">★ Set Default</button>
+      </div>
+      <div class="toggle-row">
+        <button class="tgl-btn active" id="sortAsc"  onclick="setSortOrder('asc')">A → Z</button>
+        <button class="tgl-btn"        id="sortDesc" onclick="setSortOrder('desc')">Z → A</button>
+      </div>
+    </div>
+
+    <!-- Folder destinations -->
+    <div class="rp-section">
+      <div class="rp-head">
+        <span class="rp-label">Sift Destinations</span>
+        <button class="add-folder-btn" id="addFolderBtn" onclick="addFolder()">+ Add</button>
+      </div>
+      <div id="folderConfig"></div>
+    </div>
+
+    <!-- Sort buttons + undo -->
+    <div class="rp-section">
+      <div class="rp-label" style="margin-bottom:10px">Sift into folder:</div>
+      <div class="sort-btns-group" id="sortBtns"></div>
+      <button class="undo-btn" id="undoBtn" onclick="undoSort()" disabled>↩ Undo Last Move</button>
+    </div>
+
+    <!-- Media filter -->
+    <div class="rp-section">
+      <div class="rp-label" style="margin-bottom:8px">Show</div>
+      <div class="filter-grid">
+        <button class="filter-btn active" id="filterBoth"   onclick="setFilter('both')">All</button>
+        <button class="filter-btn"        id="filterImages" onclick="setFilter('images')">🖼 Images</button>
+        <button class="filter-btn"        id="filterAudios" onclick="setFilter('audios')">🔊 Audio</button>
+        <button class="filter-btn"        id="filterVideos" onclick="setFilter('videos')">🎬 Videos</button>
+      </div>
+    </div>
+
+    <!-- Playback speed -->
+    <div class="rp-section" id="speedPanel">
+      <div class="rp-label" style="margin-bottom:8px">Playback Speed</div>
+      <div class="spd-row" id="spdRow"></div>
+      <button class="rp-sm-btn" onclick="saveDefaultSpeed()">★ Set as Default</button>
+    </div>
+
+    <!-- Slideshow -->
+    <div class="ss-panel" id="ssPanel">
+      <div class="ss-header">
+        <span class="rp-label">Slideshow</span>
+      </div>
+      <div class="ss-play-col">
+        <button class="filter-btn" id="slideshowBtn" onclick="toggleSlideshow()">▶ Play</button>
+        <button class="filter-btn" id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Full</button>
+      </div>
+      <div class="ss-right" id="ssContent">
+        <div class="ss-speed-row">
+          <input type="number" id="ssNumInput" class="ss-num" min="0.1" max="2.0" step="0.1" value="1.0">
+          <span class="ss-unit">s</span>
+          <div class="ss-arrows">
+            <button class="ss-arrow" id="ssUp">▲</button>
+            <button class="ss-arrow" id="ssDn">▼</button>
+          </div>
+          <input type="range" id="ssSlider" class="ss-slider" min="0.1" max="2.0" step="0.1" value="1.0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Display on launch -->
+    <div class="rp-section">
+      <div class="rp-label" style="margin-bottom:8px">Display on Launch</div>
+      <div class="toggle-row">
+        <button class="tgl-btn" id="startupLast"  onclick="setStartup('last')">Last Folder</button>
+        <button class="tgl-btn" id="startupBlank" onclick="setStartup('blank')">Blank</button>
+      </div>
+    </div>
+
+    <!-- Shortcuts -->
+    <div class="shortcut-box" id="shortcutBox">
+      <div class="sc-head">Keyboard Shortcuts</div>
+      <div id="scText">
+        <div class="sc-row"><span class="sc-key">1 – 5</span> Sift into folder</div>
+        <div class="sc-row"><span class="sc-key">←</span><span class="sc-key">→</span> Navigate files</div>
+        <div class="sc-row"><span class="sc-key">Z</span> Undo &nbsp; <span class="sc-key">B</span> Browse</div>
+
+        <div class="sc-row"><span class="sc-key">Space</span> Play / Pause</div>
+        <div class="sc-row"><span class="sc-key">F</span> Fullscreen</div>
+      </div>
+    </div>
+
+  </div><!-- /panel-right -->
+
+</div><!-- /workspace -->
+
+<!-- ── STATUS BAR ─────────────────────────────────────────────────── -->
+<div class="statusbar">
+  <span id="statusText">Ready — open a folder to begin</span>
+  <div class="sb-progress">
+    <div class="sb-track"><div class="sb-fill" id="pFill" style="width:0%"></div></div>
+    <span id="pLabel">0%</span>
+  </div>
+</div>
+
+<!-- hidden file list (JS compatibility) -->
+<div id="fileList" style="display:none"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Config
+═══════════════════════════════════════════════════════════════ */
+const MAX_FOLDERS  = 5;
+const DOT_COLORS   = ['#4ade80','#f87171','#60a5fa','#fbbf24','#c084fc'];
+const BADGE_STYLES = [
+  'background:rgba(74,222,128,.1);color:#4ade80',
+  'background:rgba(248,113,113,.1);color:#f87171',
+  'background:rgba(96,165,250,.1);color:#60a5fa',
+  'background:rgba(251,191,36,.1);color:#fbbf24',
+  'background:rgba(192,132,252,.1);color:#c084fc',
+];
+const SPEEDS = [1, 2, 3, 4];
+
+/* ═══════════════════════════════════════════════════════════════
+   State
+═══════════════════════════════════════════════════════════════ */
+let folders      = loadFolders();
+let allFiles     = [];
+let files        = [];
+let mediaFilter  = 'both';
+let idx          = 0;
+let busy         = false;
+let undoStack    = [];
+let defaultSpeed  = parseFloat(localStorage.getItem('ms_speed') || '1');
+let currentSpeed  = defaultSpeed;
+let startupMode      = localStorage.getItem('ms_startup') || 'last';
+let defaultSortOrder = localStorage.getItem('ms_sort_order') || 'asc';
+let sortOrder        = defaultSortOrder;
+
+function loadFolders() {
+  const DEFAULTS = [{ name: 'Save', ci: 0 }, { name: 'Delete', ci: 1 }];
+  try {
+    const s = localStorage.getItem('ms_folders');
+    if (s) {
+      const p = JSON.parse(s);
+      if (Array.isArray(p) && p.length >= 1) {
+        while (p.length < 2) p.push({ ...DEFAULTS[p.length] });
+        p[0].ci = 0; p[1].ci = 1;
+        if (/^Folder \d+$/.test(p[0].name)) p[0].name = DEFAULTS[0].name;
+        if (/^Folder \d+$/.test(p[1].name)) p[1].name = DEFAULTS[1].name;
+        return p;
+      }
+    }
+  } catch {}
+  return DEFAULTS.map(d => ({ ...d }));
+}
+function persistFolders() { localStorage.setItem('ms_folders', JSON.stringify(folders)); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Init
+═══════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', async () => {
+  renderFolderConfig();
+  renderSortButtons();
+  renderSpeedButtons();
+  initSsControls();
+
+  document.getElementById('startupLast').classList.toggle('active',  startupMode === 'last');
+  document.getElementById('startupBlank').classList.toggle('active', startupMode === 'blank');
+  document.getElementById('sortAsc').classList.toggle('active',  sortOrder === 'asc');
+  document.getElementById('sortDesc').classList.toggle('active', sortOrder === 'desc');
+
+  const lastFolder = localStorage.getItem('ms_last_folder');
+  if (startupMode === 'last' && lastFolder) {
+    try { await loadFolder(lastFolder); }
+    catch { document.getElementById('offlineBanner').style.display = 'flex'; }
+  } else {
+    fetch('/api/files').catch(() => {
+      document.getElementById('offlineBanner').style.display = 'flex';
+    });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Folder config
+═══════════════════════════════════════════════════════════════ */
+function renderFolderConfig() {
+  const el = document.getElementById('folderConfig');
+  el.innerHTML = '';
+  folders.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'folder-row';
+    row.innerHTML =
+      `<div class="dot" style="background:${DOT_COLORS[f.ci]}"></div>` +
+      `<input class="fname-input" value="${esc(f.name)}" maxlength="40" oninput="onFolderRename(${i}, this.value)">` +
+      `<span class="kbd">${i + 1}</span>` +
+      `<button class="rm-btn" onclick="removeFolder(${i})" ${i < 2 ? 'disabled title="Cannot remove default folders"' : 'title="Remove"'}>×</button>`;
+    el.appendChild(row);
+  });
+  document.getElementById('addFolderBtn').disabled = folders.length >= MAX_FOLDERS;
+}
+function onFolderRename(i, val) {
+  folders[i].name = val.trim() || `Folder ${i + 1}`;
+  persistFolders(); renderSortButtons(); renderList();
+}
+function addFolder() {
+  if (folders.length >= MAX_FOLDERS) return;
+  const usedCi = new Set(folders.map(f => f.ci));
+  let ci = 0; while (usedCi.has(ci)) ci++;
+  folders.push({ name: `Folder ${folders.length + 1}`, ci });
+  persistFolders(); renderFolderConfig(); renderSortButtons();
+}
+function removeFolder(i) {
+  if (i < 2) return;
+  const removedName = folders[i].name;
+  folders.splice(i, 1); persistFolders();
+  allFiles.forEach(f => { if (f.sorted === removedName) f.sorted = null; });
+  undoStack = undoStack.filter(u => u.folderName !== removedName);
+  document.getElementById('undoBtn').disabled = undoStack.length === 0;
+  applyFilter(); renderFolderConfig(); renderSortButtons(); updateStats(); renderList();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Sort buttons
+═══════════════════════════════════════════════════════════════ */
+function renderSortButtons() {
+  const wrap = document.getElementById('sortBtns');
+  wrap.innerHTML = '';
+  folders.forEach((f, i) => {
+    const btn = document.createElement('button');
+    btn.className = `sort-btn btn-c${f.ci}`;
+    btn.id = `sortBtn_${i}`;
+    btn.disabled = !files.length || busy;
+    btn.innerHTML = `<span class="btn-key">${i + 1}</span><span>${esc(f.name)}</span>`;
+    btn.onclick = () => sortCurrent(i);
+    wrap.appendChild(btn);
+  });
+}
+function setSortButtonsDisabled(disabled) {
+  folders.forEach((_, i) => { const b = document.getElementById(`sortBtn_${i}`); if (b) b.disabled = disabled; });
+  document.getElementById('undoBtn').disabled = disabled || undoStack.length === 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Speed controls
+═══════════════════════════════════════════════════════════════ */
+function renderSpeedButtons() {
+  const row = document.getElementById('spdRow');
+  row.innerHTML = '';
+  SPEEDS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'spd-btn' + (s === currentSpeed ? ' active' : '') + (s === defaultSpeed ? ' is-default' : '');
+    btn.dataset.s = s;
+    btn.innerHTML = `${s}×<span class="def-dot"></span>`;
+    btn.onclick = () => setSpeed(s);
+    row.appendChild(btn);
+  });
+}
+function setSpeed(s) {
+  currentSpeed = s;
+  const m = document.querySelector('#viewer video, #viewer audio');
+  if (m) m.playbackRate = s;
+  renderSpeedButtons();
+}
+function saveDefaultSpeed() {
+  defaultSpeed = currentSpeed;
+  localStorage.setItem('ms_speed', String(defaultSpeed));
+  renderSpeedButtons(); toast(`Default speed: ${defaultSpeed}×`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Media filter
+═══════════════════════════════════════════════════════════════ */
+function applyFilter() {
+  if (mediaFilter === 'images') files = allFiles.filter(f => (f.type||f.mediaType) === 'image');
+  else if (mediaFilter === 'videos') files = allFiles.filter(f => (f.type||f.mediaType) === 'video');
+  else if (mediaFilter === 'audios') files = allFiles.filter(f => (f.type||f.mediaType) === 'audio');
+  else files = allFiles.slice();
+  if (sortOrder === 'desc') files.reverse();
+}
+function setFilter(mode) {
+  mediaFilter = mode;
+  ['both','images','videos','audios'].forEach(m => {
+    const el = document.getElementById('filter' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (el) el.classList.toggle('active', m === mode);
+  });
+  applyFilter(); updateStats(); renderList(); renderSortButtons(); renderFilmstrip();
+  if (!files.length) { showEmpty('No ' + (mode === 'both' ? 'media' : mode === 'audios' ? 'audio' : mode === 'videos' ? 'video' : mode) + ' files found in this folder.'); return; }
+  const first = findNextUnsorted(0);
+  if (first === -1) allDone(); else showFile(first);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Sort order
+═══════════════════════════════════════════════════════════════ */
+function setSortOrder(order) {
+  sortOrder = order;
+  document.getElementById('sortAsc').classList.toggle('active',  order === 'asc');
+  document.getElementById('sortDesc').classList.toggle('active', order === 'desc');
+  applyFilter(); updateStats(); renderList(); renderSortButtons(); renderFilmstrip();
+  if (!files.length) return;
+  const first = findNextUnsorted(0);
+  if (first === -1) allDone(); else showFile(first);
+}
+function saveDefaultSortOrder() {
+  defaultSortOrder = sortOrder;
+  localStorage.setItem('ms_sort_order', defaultSortOrder);
+  toast(`Default order: ${defaultSortOrder === 'asc' ? 'A → Z' : 'Z → A'}`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Startup preference
+═══════════════════════════════════════════════════════════════ */
+function setStartup(mode) {
+  startupMode = mode; localStorage.setItem('ms_startup', mode);
+  document.getElementById('startupLast').classList.toggle('active',  mode === 'last');
+  document.getElementById('startupBlank').classList.toggle('active', mode === 'blank');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Folder browsing
+═══════════════════════════════════════════════════════════════ */
+async function browseFolder() {
+  try {
+    const resp = await fetch('/api/browse', { method: 'POST' });
+    const data = await resp.json();
+    if (data.path) { document.getElementById('pathInput').value = data.path; await loadFolder(data.path); }
+  } catch { toast('Cannot reach server'); }
+}
+async function loadFolderFromInput() {
+  const path = document.getElementById('pathInput').value.trim();
+  if (path) await loadFolder(path);
+}
+async function reloadFolder() {
+  const path = document.getElementById('pathInput').value.trim();
+  if (path) await loadFolder(path);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Load files
+═══════════════════════════════════════════════════════════════ */
+async function loadFolder(path) {
+  busy = true;
+  try {
+    const resp = await fetch('/api/open', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) { toast(data.error || 'Error'); busy = false; return; }
+
+    allFiles = data.files.map(f => ({ ...f, sorted: null }));
+    applyFilter(); undoStack = [];
+    document.getElementById('pathInput').value = data.folder;
+    localStorage.setItem('ms_last_folder', data.folder);
+    document.getElementById('browseWrap').classList.remove('highlight');
+    document.getElementById('undoBtn').disabled = true;
+
+    document.getElementById('navPrev').style.display = '';
+    document.getElementById('navNext').style.display = '';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('filmstrip').style.display = '';
+
+    idx = 0; busy = false;
+    updateStats(); renderList(); renderSortButtons(); renderFilmstrip();
+    await showFile(0); loadMediaDurations();
+  } catch(e) { toast('Server error: ' + e.message); busy = false; }
+}
+
+function loadMediaDurations() {
+  const medias = allFiles.filter(f => ((f.type||f.mediaType)==='video'||(f.type||f.mediaType)==='audio') && f.duration==null);
+  let pending = medias.length; if (!pending) return;
+  medias.forEach(f => {
+    const t = (f.type||f.mediaType);
+    const el = document.createElement(t==='audio'?'audio':'video');
+    el.preload = 'metadata'; let done = false;
+    const settle = (dur) => {
+      if (done) return; done = true;
+      if (dur != null) f.duration = dur;
+      if (--pending === 0) renderList();
+    };
+    el.addEventListener('loadedmetadata', () => settle(el.duration));
+    el.addEventListener('error', () => settle(null));
+    el.src = '/media/' + encodeURIComponent(f.name);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Display a file
+═══════════════════════════════════════════════════════════════ */
+async function showFile(i) {
+  if (!files.length) { showEmpty('No media files found.'); return; }
+  i = Math.max(0, Math.min(i, files.length - 1));
+  const prevIdx = idx; idx = i;
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('navPrev').style.display = '';
+  document.getElementById('navNext').style.display = '';
+
+  const viewer = document.getElementById('viewer');
+  viewer.querySelectorAll('.video-wrap, .vcbar').forEach(el => el.remove());
+  viewer.classList.remove('video-mode');
+
+  const f = files[idx];
+  const mediaPath = f.sorted
+    ? encodeURIComponent(f.sorted) + '/' + encodeURIComponent(f.sortedAs || f.name)
+    : encodeURIComponent(f.name);
+  const url = '/media/' + mediaPath + '?_=' + Date.now();
+  const mtype = (f.mediaType || f.type);
+
+  if (mtype === 'image') {
+    const oldImgs = [...viewer.querySelectorAll('img')];
+    const img = document.createElement('img');
+    img.draggable = false; img.alt = f.name; img.style.display = 'none';
+    const show = () => { oldImgs.forEach(el => el.remove()); img.style.display = ''; positionViewerSortBadge(); };
+    img.addEventListener('load', show, { once: true });
+    img.addEventListener('error', show, { once: true });
+    img.src = url; viewer.appendChild(img);
+  } else {
+    viewer.querySelectorAll('img').forEach(el => el.remove());
+    viewer.classList.add('video-mode');
+    const wrap = document.createElement('div'); wrap.className = 'video-wrap';
+    const mediaEl = document.createElement(mtype==='audio'?'audio':'video');
+    mediaEl.src = url; mediaEl.autoplay = true; mediaEl.loop = true;
+    mediaEl.addEventListener('loadedmetadata', () => { mediaEl.playbackRate = currentSpeed; updateVcDur(mediaEl); });
+    mediaEl.addEventListener('timeupdate', () => updateVcProgress(mediaEl));
+    mediaEl.addEventListener('play',  () => { const b = document.getElementById('vcPlay'); if (b) b.textContent = '⏸'; });
+    mediaEl.addEventListener('pause', () => { const b = document.getElementById('vcPlay'); if (b) b.textContent = '▶'; });
+    wrap.appendChild(mediaEl); viewer.appendChild(wrap); buildVcBar(viewer);
+  }
+
+  document.getElementById('fileChip').style.display = 'none';
+  document.getElementById('counter').textContent = `${idx + 1} / ${files.length}`;
+  document.getElementById('statusText').textContent = `${f.name}  —  ${fmtBytes(f.size)}`;
+  document.getElementById('navPrev').disabled = idx === 0;
+  document.getElementById('navNext').disabled = idx === files.length - 1;
+  setSortButtonsDisabled(false); highlightList(idx); highlightFilmstrip(idx);
+  updateViewerSortBadge(); clearFilterMsg();
+}
+
+function navigate(delta) { const ni = idx + delta; if (ni >= 0 && ni < files.length) showFile(ni); }
+
+function updateViewerSortBadge() {
+  const badge = document.getElementById('viewerSortBadge');
+  if (!badge) return;
+  const f = files[idx];
+  if (!f || !f.sorted) { badge.style.display = 'none'; return; }
+  const fi = folders.findIndex(fl => fl.name === f.sorted);
+  const color = fi >= 0 ? DOT_COLORS[folders[fi].ci] : '#888';
+  badge.style.borderColor = color; badge.style.color = color;
+  badge.innerHTML =
+    `<div class="vsb-num" style="border-color:${color}">${fi >= 0 ? fi + 1 : '?'}</div>` +
+    `<span class="vsb-label">${f.sorted}</span>` +
+    `<span class="vsb-x">✕</span>`;
+  badge.style.display = 'none'; // hidden until positionViewerSortBadge places it
+  positionViewerSortBadge();
+}
+
+function positionViewerSortBadge() {
+  const badge = document.getElementById('viewerSortBadge');
+  if (!badge || !files[idx] || !files[idx].sorted) return;
+  const viewer = document.getElementById('viewer');
+  const img = viewer.querySelector('img');
+  const videoWrap = viewer.querySelector('.video-wrap');
+  const target = img || videoWrap;
+  if (!target) return;
+  const vRect = viewer.getBoundingClientRect();
+  const tRect = target.getBoundingClientRect();
+  badge.style.bottom = (vRect.bottom - tRect.bottom + 8) + 'px';
+  badge.style.right  = (vRect.right  - tRect.right  + 8) + 'px';
+  badge.style.display = '';
+}
+
+async function unsortCurrent() {
+  const f = files[idx];
+  if (!f || !f.sorted || busy) return;
+  busy = true;
+  try {
+    const resp = await fetch('/api/undo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder: f.sorted, dest_name: f.sortedAs || f.name, orig_name: f.name }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) { toast(data.error || 'Unsort failed'); busy = false; return; }
+    const stackIdx = undoStack.findIndex(u => u.destName === (f.sortedAs || f.name) && u.folderName === f.sorted);
+    if (stackIdx !== -1) undoStack.splice(stackIdx, 1);
+    document.getElementById('undoBtn').disabled = undoStack.length === 0;
+    f.sorted = null; f.sortedAs = null;
+    if (data.restored_name && data.restored_name !== f.name) f.name = data.restored_name;
+    applyFilter(); toast('↩ File unsorting'); updateStats(); renderList(); busy = false;
+    updateFilmstripBadge(idx);
+    await showFile(idx);
+  } catch(e) { toast('Server error: ' + e.message); busy = false; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Sort
+═══════════════════════════════════════════════════════════════ */
+async function sortCurrent(folderIdx) {
+  if (!files.length || busy) return;
+  const folderA = folders.map(f => f.name.trim().toLowerCase());
+  if (new Set(folderA).size !== folders.length) { toast('Folder names must be unique'); return; }
+  const folder = folders[folderIdx].name.trim();
+  if (!folder) { toast('Folder name is empty'); return; }
+  const f = files[idx]; busy = true; setSortButtonsDisabled(true);
+  try {
+    const isResort = !!(f.sorted);
+    const payload = { filename: f.sortedAs || f.name, folder };
+    if (isResort) payload.src_subfolder = f.sorted;
+    const resp = await fetch('/api/sort', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) { toast(data.error || 'Sort failed'); busy = false; setSortButtonsDisabled(false); return; }
+    // Remove old undo entry for this file if re-sorting
+    if (isResort) {
+      const old = undoStack.findIndex(u => u.destName === (f.sortedAs || f.name) && u.folderName === f.sorted);
+      if (old !== -1) undoStack.splice(old, 1);
+    }
+    undoStack.push({ fileIdx: idx, origName: f.name, destName: data.dest_name || f.sortedAs || f.name, folderName: folder, folderCi: folders[folderIdx].ci });
+    document.getElementById('undoBtn').disabled = false;
+    f.sorted = folder; f.sortedAs = data.dest_name || f.sortedAs || f.name;
+    updateFilmstripBadge(idx);
+    toast(`→ ${folder}`); updateStats(); renderList();
+    const next = findNextUnsorted(idx + 1); busy = false;
+    if (next === -1) allDone(); else await showFile(next);
+  } catch(e) { toast('Server error: ' + e.message); busy = false; setSortButtonsDisabled(false); }
+}
+function findNextUnsorted(from) {
+  for (let i = from; i < files.length; i++) if (!files[i].sorted) return i;
+  for (let i = 0;    i < from;         i++) if (!files[i].sorted) return i;
+  return -1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Undo
+═══════════════════════════════════════════════════════════════ */
+async function undoSort() {
+  if (!undoStack.length || busy) return;
+  const last = undoStack[undoStack.length - 1];
+  busy = true; setSortButtonsDisabled(true);
+  try {
+    const resp = await fetch('/api/undo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder: last.folderName, dest_name: last.destName, orig_name: last.origName }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) { toast(data.error || 'Undo failed'); busy = false; setSortButtonsDisabled(false); return; }
+    undoStack.pop();
+    const f = allFiles.find(x => x.name === last.origName) || allFiles.find(x => x.name === last.destName);
+    if (f) { f.sorted = null; f.sortedAs = null; if (data.restored_name && data.restored_name !== f.name) f.name = data.restored_name; }
+    applyFilter(); toast('Undo — file restored'); updateStats(); renderList(); busy = false;
+    const restoredName = (f && data.restored_name) ? data.restored_name : last.origName;
+    const restoredIdx  = files.findIndex(x => x.name === restoredName);
+    updateFilmstripBadge(restoredIdx >= 0 ? restoredIdx : 0);
+    await showFile(restoredIdx >= 0 ? restoredIdx : 0);
+  } catch(e) { toast('Server error: ' + e.message); busy = false; setSortButtonsDisabled(false); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   All done
+═══════════════════════════════════════════════════════════════ */
+function allDone() {
+  stopSlideshow();
+  const viewer = document.getElementById('viewer');
+  viewer.querySelectorAll('img, .video-wrap, .vcbar').forEach(el => el.remove());
+  viewer.classList.remove('video-mode');
+  const es = document.getElementById('emptyState');
+  es.innerHTML = `
+    <div class="state-icon">✅</div>
+    <div class="state-title">All done!</div>
+    <div class="state-sub">Every file has been sorted.<br>Browse another folder to continue.</div>
+    <button class="sort-btn browse-btn" style="margin:0 auto;height:48px" onclick="browseFolder()">📁 Browse Another Folder</button>
+  `;
+  es.style.display = '';
+  document.getElementById('fileChip').style.display = 'none';
+  document.getElementById('navPrev').style.display  = 'none';
+  document.getElementById('navNext').style.display  = 'none';
+  document.getElementById('counter').textContent    = '✓ Done';
+  setSortButtonsDisabled(true);
+  document.getElementById('undoBtn').disabled = undoStack.length === 0;
+  updateStats();
+}
+function showEmpty(msg) {
+  const viewer = document.getElementById('viewer');
+  viewer.querySelectorAll('img, .video-wrap, .vcbar').forEach(el => el.remove());
+  viewer.classList.remove('video-mode');
+  document.getElementById('viewerSortBadge').style.display = 'none';
+  document.getElementById('emptyState').style.display = '';
+  const sub = document.getElementById('emptyState').querySelector('.state-sub');
+  if (sub && msg) sub.textContent = msg;
+  const filterMsg = document.getElementById('stateFilterMsg');
+  if (filterMsg) { filterMsg.textContent = msg || ''; filterMsg.style.display = msg ? '' : 'none'; }
+  setSortButtonsDisabled(true);
+}
+function clearFilterMsg() {
+  const filterMsg = document.getElementById('stateFilterMsg');
+  if (filterMsg) { filterMsg.textContent = ''; filterMsg.style.display = 'none'; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Stats & progress
+═══════════════════════════════════════════════════════════════ */
+function updateStats() {
+  const total  = files.length;
+  const sorted = files.filter(f => f.sorted).length;
+  const pct    = total ? Math.round(sorted / total * 100) : 0;
+  document.getElementById('statTotal').textContent  = total;
+  document.getElementById('statSorted').textContent = sorted;
+  document.getElementById('statLeft').textContent   = total - sorted;
+  document.querySelectorAll('#pFill').forEach(el => el.style.width = pct + '%');
+  document.getElementById('pLabel').textContent = pct + '%';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   File list (hidden, kept for compatibility)
+═══════════════════════════════════════════════════════════════ */
+function renderList() {
+  const list = document.getElementById('fileList');
+  if (!list) return;
+  list.innerHTML = '';
+  files.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'fitem' + (i === idx ? ' active' : '') + (f.sorted ? ' sorted' : '');
+    div.onclick = () => showFile(i);
+    div.dataset.idx = i;
+    list.appendChild(div);
+  });
+}
+function highlightList(i) {
+  const list = document.getElementById('fileList');
+  if (!list) return;
+  list.querySelectorAll('.fitem').forEach((el, j) => el.classList.toggle('active', j === i));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Filmstrip — static center frame, track slides left/right
+═══════════════════════════════════════════════════════════════ */
+const FS_ITEM_W = 58, FS_GAP = 4, FS_STEP = 58 + 4;
+
+function renderFilmstrip() {
+  const strip = document.getElementById('filmstrip');
+  const track = document.getElementById('fsTrack');
+  if (!strip || !track) return;
+  if (!files.length) { strip.style.display = 'none'; return; }
+  strip.style.display = '';
+  track.innerHTML = '';
+  files.forEach((f, i) => track.appendChild(buildFsItem(f, i)));
+  positionFilmstrip(false);
+}
+
+function buildFsItem(f, i) {
+  const item = document.createElement('div');
+  item.className = 'fs-item' + (i === idx ? ' fs-active' : '');
+  item.dataset.idx = i;
+  item.onclick = () => showFile(i);
+  const t = f.mediaType || f.type;
+  if (t === 'image') {
+    const img = document.createElement('img');
+    img.className = 'fs-thumb'; img.loading = 'lazy'; img.alt = '';
+    img.src = '/media/' + encodeURIComponent(f.name);
+    item.appendChild(img);
+  } else if (t === 'video') {
+    const img = document.createElement('img');
+    img.className = 'fs-thumb'; img.alt = '';
+    item.appendChild(img);
+    if (f._thumb) {
+      img.src = f._thumb;
+    } else {
+      const ico = document.createElement('div');
+      ico.className = 'fs-ico'; ico.textContent = '🎬';
+      item.appendChild(ico);
+      captureVideoThumb(f, img, ico);
+    }
+  } else {
+    const ico = document.createElement('div');
+    ico.className = 'fs-ico';
+    ico.textContent = '🔊';
+    item.appendChild(ico);
+  }
+  if (f.sorted) item.appendChild(buildFsBadge(f));
+  return item;
+}
+
+function buildFsBadge(f) {
+  const fi = folders.findIndex(fl => fl.name === f.sorted);
+  const color = fi >= 0 ? DOT_COLORS[folders[fi].ci] : '#666';
+  const badge = document.createElement('div');
+  badge.className = 'fs-badge';
+  badge.style.borderColor = color; badge.style.color = color;
+  badge.textContent = fi >= 0 ? fi + 1 : '?';
+  return badge;
+}
+
+function positionFilmstrip(animate) {
+  const strip = document.getElementById('filmstrip');
+  const track = document.getElementById('fsTrack');
+  if (!strip || !track) return;
+  const centerX = strip.clientWidth / 2;
+  const offset  = centerX - (idx * FS_STEP) - FS_ITEM_W / 2;
+  if (!animate) {
+    track.style.transition = 'none';
+    track.style.left = offset + 'px';
+    /* re-enable transition next frame */
+    requestAnimationFrame(() => { track.style.transition = ''; });
+  } else {
+    track.style.left = offset + 'px';
+  }
+}
+
+function highlightFilmstrip(newIdx) {
+  const track = document.getElementById('fsTrack');
+  if (!track) return;
+  track.querySelectorAll('.fs-item').forEach((el, i) => el.classList.toggle('fs-active', i === newIdx));
+  positionFilmstrip(true);
+}
+
+function captureVideoThumb(f, imgEl, icoEl) {
+  const mediaPath = f.sorted
+    ? encodeURIComponent(f.sorted) + '/' + encodeURIComponent(f.sortedAs || f.name)
+    : encodeURIComponent(f.name);
+  const vid = document.createElement('video');
+  vid.preload = 'metadata'; vid.muted = true; vid.playsInline = true;
+  vid.crossOrigin = 'anonymous';
+  const done = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = vid.videoWidth || 120; canvas.height = vid.videoHeight || 68;
+      canvas.getContext('2d').drawImage(vid, 0, 0, canvas.width, canvas.height);
+      const url = canvas.toDataURL('image/jpeg', 0.7);
+      f._thumb = url; imgEl.src = url;
+      if (icoEl && icoEl.parentNode) icoEl.remove();
+    } catch(e) {}
+    vid.src = '';
+  };
+  vid.addEventListener('seeked', done, { once: true });
+  vid.addEventListener('error', () => { vid.src = ''; }, { once: true });
+  vid.src = '/media/' + mediaPath;
+  vid.addEventListener('loadedmetadata', () => { vid.currentTime = 0.1; }, { once: true });
+}
+
+function updateFilmstripBadge(i) {
+  const track = document.getElementById('fsTrack');
+  if (!track) return;
+  const item = track.querySelector(`.fs-item[data-idx="${i}"]`);
+  if (!item) return;
+  const old = item.querySelector('.fs-badge');
+  if (old) old.remove();
+  const f = files[i];
+  if (f && f.sorted) item.appendChild(buildFsBadge(f));
+}
+
+/* Recalculate on resize so cursor stays aligned */
+window.addEventListener('resize', () => { if (files.length) { positionFilmstrip(false); positionViewerSortBadge(); } });
+
+/* ═══════════════════════════════════════════════════════════════
+   Scroll-to-zoom
+═══════════════════════════════════════════════════════════════ */
+let zoomLevel = 1;
+let zoomPanX = 0, zoomPanY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0, panOriginX = 0, panOriginY = 0;
+
+function resetZoom() {
+  zoomLevel = 1; zoomPanX = 0; zoomPanY = 0;
+  applyZoom();
+}
+
+function getZoomTarget() {
+  const viewer = document.getElementById('viewer');
+  // For video, zoom the <video> element inside the wrap (wrap clips it via overflow:hidden).
+  // For images, zoom the <img> directly.
+  return viewer.querySelector('img') || viewer.querySelector('video') || viewer.querySelector('.video-wrap');
+}
+
+function applyZoom() {
+  const el = getZoomTarget();
+  if (!el) return;
+  el.style.transformOrigin = '0 0';
+  el.style.transform = `translate(${zoomPanX}px, ${zoomPanY}px) scale(${zoomLevel})`;
+  el.style.cursor = zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : '';
+  positionViewerSortBadge();
+}
+
+document.getElementById('viewer').addEventListener('wheel', e => {
+  const el = getZoomTarget();
+  if (!el) return;
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? 1.1 : 0.9;
+  const newZoom = Math.min(8, Math.max(1, zoomLevel * delta));
+  // Compute mouse position relative to element's natural (pre-transform) origin.
+  // With transformOrigin:0 0 and translate(px,py) scale(z), the rendered top-left is
+  // at (nat_left + zoomPanX), so nat_left = elRect.left - zoomPanX.
+  const elRect = el.getBoundingClientRect();
+  const mouseX = e.clientX - elRect.left + zoomPanX;
+  const mouseY = e.clientY - elRect.top  + zoomPanY;
+  // Zoom toward cursor
+  zoomPanX = mouseX - (mouseX - zoomPanX) * (newZoom / zoomLevel);
+  zoomPanY = mouseY - (mouseY - zoomPanY) * (newZoom / zoomLevel);
+  zoomLevel = newZoom;
+  if (zoomLevel === 1) { zoomPanX = 0; zoomPanY = 0; }
+  applyZoom();
+}, { passive: false });
+
+document.getElementById('viewer').addEventListener('mousedown', e => {
+  if (zoomLevel <= 1) return;
+  isPanning = true; panStartX = e.clientX; panStartY = e.clientY;
+  panOriginX = zoomPanX; panOriginY = zoomPanY;
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!isPanning) return;
+  zoomPanX = panOriginX + (e.clientX - panStartX);
+  zoomPanY = panOriginY + (e.clientY - panStartY);
+  applyZoom();
+});
+window.addEventListener('mouseup', () => { isPanning = false; applyZoom(); });
+
+// Reset zoom on file change — hook into showFile
+const _origShowFile = showFile;
+showFile = async function(i) { resetZoom(); await _origShowFile(i); };
+
+/* ═══════════════════════════════════════════════════════════════
+   Keyboard shortcuts
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key >= '1' && e.key <= '5') {
+    const fi = parseInt(e.key) - 1;
+    if (fi < folders.length) { e.preventDefault(); sortCurrent(fi); }
+    return;
+  }
+  switch (e.key) {
+    case 'ArrowLeft':  e.preventDefault(); navigate(-1); break;
+    case 'ArrowRight': e.preventDefault(); navigate(1);  break;
+    case 'z': case 'Z': if (!e.ctrlKey) { e.preventDefault(); undoSort(); } break;
+    case ' ': if (document.querySelector('#viewer video, #viewer audio')) { e.preventDefault(); vcTogglePlay(); } break;
+    case 'b': case 'B': e.preventDefault(); browseFolder(); break;
+    case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Video controls
+═══════════════════════════════════════════════════════════════ */
+function buildVcBar(viewer) {
+  const bar = document.createElement('div');
+  bar.className = 'vcbar';
+  bar.innerHTML =
+    `<button class="vc-btn" id="vcPlay" onclick="vcTogglePlay()">⏸</button>` +
+    `<span class="vc-time" id="vcTime">0:00</span>` +
+    `<input type="range" class="vc-seek" id="vcSeek" min="0" max="100" step="0.1" value="0">` +
+    `<span class="vc-time" id="vcDur">0:00</span>`;
+  bar.querySelector('#vcSeek').addEventListener('input', function() {
+    const v = document.querySelector('#viewer video, #viewer audio');
+    if (v && v.duration) v.currentTime = (this.value / 100) * v.duration;
+  });
+  viewer.appendChild(bar);
+}
+function vcTogglePlay() { const v = document.querySelector('#viewer video, #viewer audio'); if (!v) return; v.paused ? v.play() : v.pause(); }
+function updateVcDur(v)      { const el = document.getElementById('vcDur'); if (el) el.textContent = fmtDuration(v.duration || 0); }
+function updateVcProgress(v) {
+  const t = document.getElementById('vcTime'); const s = document.getElementById('vcSeek');
+  if (t) t.textContent = fmtDuration(v.currentTime);
+  if (s && v.duration) s.value = (v.currentTime / v.duration) * 100;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Fullscreen
+═══════════════════════════════════════════════════════════════ */
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+  else document.exitFullscreen();
+}
+let _fsTimer = null, _fsMouseReady = false, _ssPanelParent = null, _ssPanelSibling = null;
+
+function _fsShowControls() {
+  const panel = document.getElementById('ssPanel');
+  panel.style.transition = 'opacity 0.35s'; panel.style.opacity = '1'; panel.style.pointerEvents = 'all';
+  document.getElementById('navPrev').classList.add('fs-nav-show');
+  document.getElementById('navNext').classList.add('fs-nav-show');
+}
+
+function _fsHideControls() {
+  const panel = document.getElementById('ssPanel');
+  panel.style.opacity = '0'; panel.style.pointerEvents = 'none';
+  document.getElementById('navPrev').classList.remove('fs-nav-show');
+  document.getElementById('navNext').classList.remove('fs-nav-show');
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const panel = document.getElementById('ssPanel');
+  clearTimeout(_fsTimer);
+  if (document.fullscreenElement) {
+    _ssPanelParent = panel.parentElement; _ssPanelSibling = panel.nextSibling;
+    document.body.appendChild(panel);
+    Object.assign(panel.style, { position:'fixed', right:'16px', bottom:'42px', zIndex:'9000', margin:'0', transition:'none', opacity:'1', pointerEvents:'all' });
+    _fsMouseReady = false;
+    _fsHideControls();
+    _fsTimer = setTimeout(() => { panel.style.transition='opacity 0.35s'; _fsMouseReady=true; }, 200);
+  } else {
+    _fsMouseReady = false;
+    _fsHideControls();
+    if (_ssPanelParent) _ssPanelParent.insertBefore(panel, _ssPanelSibling);
+    Object.assign(panel.style, { position:'', right:'', bottom:'', zIndex:'', margin:'', transition:'', opacity:'', pointerEvents:'' });
+  }
+});
+document.addEventListener('mousemove', () => {
+  if (!document.fullscreenElement || !_fsMouseReady) return;
+  _fsShowControls();
+  clearTimeout(_fsTimer);
+  _fsTimer = setTimeout(_fsHideControls, 500);
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   Slideshow
+═══════════════════════════════════════════════════════════════ */
+let slideshowTimer = null, slideshowSpeed = 1.0;
+function toggleSlideshow() { slideshowTimer ? stopSlideshow() : startSlideshow(); }
+function startSlideshow() {
+  if (!files.length) return; stopSlideshow();
+  slideshowTimer = setInterval(() => showFile(idx + 1 < files.length ? idx + 1 : 0), slideshowSpeed * 1000);
+  updateSsUI(true);
+}
+function stopSlideshow() { clearInterval(slideshowTimer); slideshowTimer = null; updateSsUI(false); }
+function updateSsUI(running) {
+  const btn = document.getElementById('slideshowBtn');
+  if (btn) { btn.classList.toggle('active', running); btn.textContent = running ? '⏹ Stop' : '▶ Play'; }
+}
+function syncSsSpeed(v) {
+  v = Math.min(2.0, Math.max(0.1, Math.round(parseFloat(v)*10)/10));
+  if (isNaN(v)) v = 1.0; slideshowSpeed = v;
+  const sl = document.getElementById('ssSlider'); const ni = document.getElementById('ssNumInput');
+  if (sl) sl.value = v; if (ni) ni.value = v.toFixed(1);
+  if (slideshowTimer) { stopSlideshow(); startSlideshow(); }
+}
+function initSsControls() {
+  const slider = document.getElementById('ssSlider'), numIn = document.getElementById('ssNumInput');
+  const upBtn = document.getElementById('ssUp'), dnBtn = document.getElementById('ssDn');
+  slider.addEventListener('input',  () => syncSsSpeed(slider.value));
+  numIn.addEventListener('change',  () => syncSsSpeed(numIn.value));
+  upBtn.addEventListener('click',   () => syncSsSpeed(slideshowSpeed + 0.1));
+  dnBtn.addEventListener('click',   () => syncSsSpeed(slideshowSpeed - 0.1));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Toast
+═══════════════════════════════════════════════════════════════ */
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Utilities
+═══════════════════════════════════════════════════════════════ */
+function fmtDuration(s) {
+  if (s == null || isNaN(s)) return ''; s = Math.round(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = String(s%60).padStart(2,'0');
+  return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${ss}` : `${m}:${ss}`;
+}
+function fmtBytes(n) {
+  if (!n) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1<<20) return (n/1024).toFixed(1) + ' KB';
+  if (n < 1<<30) return (n/1048576).toFixed(1) + ' MB';
+  return (n/1073741824).toFixed(2) + ' GB';
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function openGuide() {
+  const o = document.getElementById('guideOverlay');
+  o.style.display = 'flex'; requestAnimationFrame(() => o.classList.add('open'));
+}
+function openAbout() {
+  const o = document.getElementById('aboutOverlay');
+  o.style.display = 'flex'; requestAnimationFrame(() => o.classList.add('open'));
+}
+function closeAbout() {
+  const o = document.getElementById('aboutOverlay');
+  o.classList.remove('open'); o.style.display = 'none';
+  localStorage.setItem('sift_about_seen', '1');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeAbout(); closeGuide(); } });
+if (!localStorage.getItem('sift_guide_seen')) openGuide();
+function closeGuide() {
+  const o = document.getElementById('guideOverlay');
+  o.classList.remove('open'); o.style.display = 'none';
+  localStorage.setItem('sift_guide_seen', '1');
+}
+</script>
+</body>
+</html>
