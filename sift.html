@@ -1574,9 +1574,8 @@ function resetZoom() {
 
 function getZoomTarget() {
   const viewer = document.getElementById('viewer');
-  // For video, zoom the <video> element inside the wrap (wrap clips it via overflow:hidden).
-  // For images, zoom the <img> directly.
-  return viewer.querySelector('img') || viewer.querySelector('video') || viewer.querySelector('.video-wrap');
+  // Exclude the NC logo inside #emptyState — only target loaded media.
+  return viewer.querySelector('img:not(.state-logo)') || viewer.querySelector('video') || viewer.querySelector('.video-wrap');
 }
 
 function applyZoom() {
@@ -1589,6 +1588,7 @@ function applyZoom() {
 }
 
 document.getElementById('viewer').addEventListener('wheel', e => {
+  if (e.ctrlKey) return; // let browser handle Ctrl+scroll (page zoom)
   const el = getZoomTarget();
   if (!el) return;
   e.preventDefault();
