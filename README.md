@@ -28,10 +28,15 @@ Sift is a fast, no-fuss media sorting tool for Windows. Open a folder of images,
 
 ## Quick Start
 
-1. Clone or download this repository
-2. Double-click **run.bat**
+### One-click install (recommended)
 
-`run.bat` will install dependencies automatically on first run, then launch Sift. Your browser will open to `http://localhost:7432`.
+1. Download **[install.bat](install.bat)** from this repo
+2. Double-click it
+3. A shortcut will appear on your Desktop — double-click it to launch Sift
+
+The installer will check for Python, download Sift, install all dependencies, and create a Desktop shortcut automatically.
+
+> **Note:** Python 3.10+ is required. If you don't have it, the installer will open the download page for you. When installing Python, make sure to tick **"Add Python to PATH"**.
 
 ### Manual install
 
