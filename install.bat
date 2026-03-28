@@ -27,8 +27,9 @@ for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set PY_VER=%%v
 echo  [OK] Python %PY_VER% found.
 echo.
 
-:: ── Choose install location ───────────────────────────────────────────────────
-set INSTALL_DIR=%USERPROFILE%\Sift
+:: ── Install location = folder this script is in ──────────────────────────────
+set INSTALL_DIR=%~dp0
+set INSTALL_DIR=%INSTALL_DIR:~0,-1%
 echo  Sift will be installed to:
 echo  %INSTALL_DIR%
 echo.
@@ -47,9 +48,8 @@ echo.
 
 :: ── Extract ───────────────────────────────────────────────────────────────────
 echo  Extracting...
-if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%"
 powershell -Command "Expand-Archive -Path '%TEMP%\sift.zip' -DestinationPath '%TEMP%\sift_extracted' -Force"
-move "%TEMP%\sift_extracted\Sift-main" "%INSTALL_DIR%" >nul
+xcopy /e /y /q "%TEMP%\sift_extracted\Sift-main\*" "%INSTALL_DIR%\" >nul
 rmdir /s /q "%TEMP%\sift_extracted" 2>nul
 del "%TEMP%\sift.zip" 2>nul
 echo  [OK] Extracted to %INSTALL_DIR%
