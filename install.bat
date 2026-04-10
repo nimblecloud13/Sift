@@ -58,7 +58,7 @@ echo.
 :: ── Install dependencies ──────────────────────────────────────────────────────
 echo  Installing dependencies...
 python -m pip install --upgrade pip --quiet
-python -m pip install flask pystray pillow --quiet
+python -m pip install -r "%INSTALL_DIR%\requirements.txt" --quiet
 if errorlevel 1 (
     echo.
     echo  [!] Dependency installation failed.
