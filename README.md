@@ -1,4 +1,4 @@
-# Sift — Free Media Sorter for Windows
+# Sift. Free Media Sorter for Windows
 
 Sift is a fast, no-fuss media sorting tool for Windows. Open a folder of images, videos, or audio files, set up your destinations, and move through them one by one with a single keypress. Built for the moment you realize you have gigabytes of unsorted media and just need to get through it.
 <img width="2556" height="1384" alt="sift_preview_image_1" src="https://github.com/user-attachments/assets/8d2e409e-afeb-4cda-b700-39f25fdad6fa" />
@@ -13,10 +13,20 @@ Sift is a fast, no-fuss media sorting tool for Windows. Open a folder of images,
 - Re-sort already-sorted files into a different destination at any time
 - Undo last sort with **Z**
 - Filter view by media type (images, video, or audio)
+- **Strip Metadata.** Duplicate any folder with embedded metadata removed from every file (images via Pillow, video/audio via ffmpeg)
 - Slideshow mode with fullscreen support
 - Scroll-to-zoom on images and video, with click-and-drag panning when zoomed in
 - Paste any folder path directly into the path box and press Enter to load
-- Runs locally — no internet connection, no account, no telemetry
+- Runs locally. No internet connection, no account, no telemetry
+
+## Additional Features
+
+- **Strip Metadata.** Duplicate any folder with GPS tags, camera info, timestamps, and other personally identifying metadata scrubbed from every file. Original folder is untouched. Images are cleaned instantly. Video/audio files require ffmpeg. Sift will offer to install it automatically if needed, or you can skip those files
+- **Grid view.** See all loaded images at once in a full-window grid. Adjustable column count, click any image to jump to it, optional autoscroll with speed control
+- **Slideshow mode.** Auto-advance through files at an adjustable interval. Pair with fullscreen for a gallery experience
+- **Display on Launch.** Choose whether Sift reopens your last folder on startup or opens blank
+- **Light and dark mode.** Toggle between themes from the controls panel. Preference is remembered across sessions
+- **Copy Path.** One-click copy of the current file's full path to the clipboard
 
 ---
 
@@ -33,7 +43,7 @@ Sift is a fast, no-fuss media sorting tool for Windows. Open a folder of images,
 
 1. Download **[install.bat](install.bat)** from this repo
 2. Double-click it
-3. A shortcut will appear on your Desktop — double-click it to launch Sift
+3. A shortcut will appear on your Desktop. Double-click it to launch Sift
 
 The installer will check for Python, download Sift, install all dependencies, and create a Desktop shortcut automatically.
 

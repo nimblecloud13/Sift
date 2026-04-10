@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Sift</title>
+<script>if(localStorage.getItem('ms_theme')==='light')document.documentElement.classList.add('light');</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -23,6 +24,22 @@
   --text-muted:#8a96b8;
   --r: 7px;
   --t: 0.13s cubic-bezier(.4,0,.2,1);
+}
+html.light {
+  --bg:        #f0f2f7;
+  --bg-panel:  #e2e6ef;
+  --bg-card:   #ffffff;
+  --bg-input:  #ffffff;
+  --bg-hi:     #d4daf0;
+  --border:    #c4cad8;
+  --border-hi: #a0a8c0;
+  --accent:    #d97706;
+  --accent-hi: #b45309;
+  --accent-dim:rgba(217,119,6,.10);
+  --accent-glow:rgba(217,119,6,.22);
+  --text:      #1a1d2e;
+  --text-dim:  #3a3f58;
+  --text-muted:#6b7494;
 }
 
 html, body {
@@ -70,12 +87,20 @@ html, body {
   box-shadow: 0 0 12px var(--accent-glow); font-weight: 600;
 }
 .tbtn-accent:hover { box-shadow: 0 0 20px var(--accent-glow); }
+.tbtn-green { border-color: #16a34a; color: #16a34a; background: rgba(22,163,74,.08); }
+.tbtn-green:hover { border-color: #16a34a; color: #16a34a; background: rgba(22,163,74,.18); }
+.tbtn-red   { border-color: #dc2626; color: #dc2626; background: rgba(220,38,38,.08); }
+.tbtn-red:hover   { border-color: #dc2626; color: #dc2626; background: rgba(220,38,38,.18); }
+html:not(.light) .tbtn-green { border-color: #4ade80; color: #4ade80; background: transparent; }
+html:not(.light) .tbtn-green:hover { background: rgba(74,222,128,.08); }
+html:not(.light) .tbtn-red   { border-color: #f87171; color: #f87171; background: transparent; }
+html:not(.light) .tbtn-red:hover   { background: rgba(248,113,113,.08); }
 .counter {
   font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums;
   flex-shrink: 0; letter-spacing: .5px; background: var(--bg-card);
   border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px;
 }
-.browse-wrap { display: flex; align-items: center; flex-shrink: 0; }
+.browse-wrap { display: flex; align-items: center; flex-shrink: 0; gap: 6px; }
 .browse-btn-top {
   height: 32px; padding: 0 16px;
   background: var(--accent); border: 1px solid var(--accent-hi);
@@ -118,7 +143,7 @@ html, body {
 .nav-btn {
   position: absolute; top: 50%; transform: translateY(-50%);
   width: 44px; height: 88px;
-  background: rgba(25,28,36,.75); backdrop-filter: blur(18px) saturate(1.5);
+  background: var(--bg-panel); backdrop-filter: blur(18px) saturate(1.5);
   border: 1px solid var(--border-hi); border-radius: 11px;
   color: var(--text); font-size: 24px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -126,7 +151,7 @@ html, body {
   opacity: 0; /* hidden until hover near them */
 }
 .viewer:hover .nav-btn:not(:disabled) { opacity: 1; }
-.nav-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(25,28,36,.95); transform: translateY(-50%) scale(1.07); opacity: 1 !important; }
+.nav-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-panel); transform: translateY(-50%) scale(1.07); opacity: 1 !important; }
 .nav-btn:active { transform: translateY(-50%) scale(.96); }
 .nav-btn:disabled { opacity: 0 !important; cursor: default; pointer-events: none; }
 .nav-btn.prev { left: 16px; }
@@ -208,16 +233,17 @@ html, body {
 .filmstrip {
   height: 76px; background: var(--bg-panel); border-top: 1px solid var(--border);
   overflow: hidden; flex-shrink: 0; position: relative;
-  padding-right: 264px;
+  padding-right: 264px; cursor: grab; user-select: none;
 }
-/* Sliding track — JS moves it left/right via `left` property */
+.filmstrip:active { cursor: grabbing; }
+/* Sliding track. JS moves it left/right via `left` property */
 .fs-track {
   display: flex; align-items: center; gap: 4px;
   position: absolute; top: 50%; transform: translateY(-50%);
   transition: left 0.22s cubic-bezier(.4,0,.2,1);
   will-change: left;
 }
-/* Static center frame — always in the middle */
+/* Static center frame. Always in the middle */
 .fs-cursor {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
@@ -351,16 +377,23 @@ html, body {
   font-size: 11px; font-weight: 700; font-family: 'Consolas', monospace;
 }
 .sort-btn span:last-child { flex: 1; }
-.btn-c0 { background: linear-gradient(110deg,#081a0e,#0b2015); border-color: #0f2a18; border-left-color: #4ade80; color: #4ade80; }
-.btn-c0:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(74,222,128,.18); transform: translateX(2px); }
-.btn-c1 { background: linear-gradient(110deg,#1a0808,#200b0b); border-color: #3a1010; border-left-color: #f87171; color: #f87171; }
-.btn-c1:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(248,113,113,.18); transform: translateX(2px); }
-.btn-c2 { background: linear-gradient(110deg,#08101a,#0b1420); border-color: #101e38; border-left-color: #60a5fa; color: #60a5fa; }
-.btn-c2:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(96,165,250,.18); transform: translateX(2px); }
-.btn-c3 { background: linear-gradient(110deg,#1a1008,#201408); border-color: #3a200e; border-left-color: #fbbf24; color: #fbbf24; }
-.btn-c3:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(251,191,36,.18); transform: translateX(2px); }
-.btn-c4 { background: linear-gradient(110deg,#10081a,#150b22); border-color: #22103c; border-left-color: #c084fc; color: #c084fc; }
-.btn-c4:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 4px 18px rgba(192,132,252,.18); transform: translateX(2px); }
+.btn-c0 { background: linear-gradient(110deg,rgba(74,222,128,.10),rgba(74,222,128,.16)); border-color: rgba(74,222,128,.3); border-left-color: #4ade80; color: #16a34a; }
+.btn-c0:not(:disabled):hover { background: linear-gradient(110deg,rgba(74,222,128,.22),rgba(74,222,128,.30)); box-shadow: 0 4px 18px rgba(74,222,128,.22); transform: translateX(2px); }
+.btn-c1 { background: linear-gradient(110deg,rgba(248,113,113,.10),rgba(248,113,113,.16)); border-color: rgba(248,113,113,.3); border-left-color: #f87171; color: #dc2626; }
+.btn-c1:not(:disabled):hover { background: linear-gradient(110deg,rgba(248,113,113,.22),rgba(248,113,113,.30)); box-shadow: 0 4px 18px rgba(248,113,113,.22); transform: translateX(2px); }
+.btn-c2 { background: linear-gradient(110deg,rgba(96,165,250,.10),rgba(96,165,250,.16)); border-color: rgba(96,165,250,.3); border-left-color: #60a5fa; color: #2563eb; }
+.btn-c2:not(:disabled):hover { background: linear-gradient(110deg,rgba(96,165,250,.22),rgba(96,165,250,.30)); box-shadow: 0 4px 18px rgba(96,165,250,.22); transform: translateX(2px); }
+.btn-c3 { background: linear-gradient(110deg,rgba(251,191,36,.10),rgba(251,191,36,.16)); border-color: rgba(251,191,36,.3); border-left-color: #fbbf24; color: #b45309; }
+.btn-c3:not(:disabled):hover { background: linear-gradient(110deg,rgba(251,191,36,.22),rgba(251,191,36,.30)); box-shadow: 0 4px 18px rgba(251,191,36,.22); transform: translateX(2px); }
+.btn-c4 { background: linear-gradient(110deg,rgba(192,132,252,.10),rgba(192,132,252,.16)); border-color: rgba(192,132,252,.3); border-left-color: #c084fc; color: #7c3aed; }
+.btn-c4:not(:disabled):hover { background: linear-gradient(110deg,rgba(192,132,252,.22),rgba(192,132,252,.30)); box-shadow: 0 4px 18px rgba(192,132,252,.22); transform: translateX(2px); }
+
+/* Dark mode: restore deep dark fills */
+html:not(.light) .btn-c0 { background: linear-gradient(110deg,#081a0e,#0b2015); border-color: #0f2a18; color: #4ade80; }
+html:not(.light) .btn-c1 { background: linear-gradient(110deg,#1a0808,#200b0b); border-color: #3a1010; color: #f87171; }
+html:not(.light) .btn-c2 { background: linear-gradient(110deg,#08101a,#0b1420); border-color: #101e38; color: #60a5fa; }
+html:not(.light) .btn-c3 { background: linear-gradient(110deg,#1a1008,#201408); border-color: #3a200e; color: #fbbf24; }
+html:not(.light) .btn-c4 { background: linear-gradient(110deg,#10081a,#150b22); border-color: #22103c; color: #c084fc; }
 .browse-btn {
   background: var(--accent); border-color: var(--accent-hi); border-left-color: var(--accent-hi);
   color: #000; font-weight: 700; height: 48px;
@@ -460,6 +493,32 @@ html, body {
 }
 .mini-default-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ══ SUBFOLDER TOGGLE BUTTON ════════════════════════════════════════ */
+.subfolder-btn {
+  height: 20px; padding: 0 9px; flex-shrink: 0;
+  background: transparent; border: 1px solid var(--border-hi);
+  border-radius: var(--r); color: var(--text-muted);
+  font-size: 10px; font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+  transition: border-color var(--t), color var(--t), background var(--t);
+  white-space: nowrap; letter-spacing: .2px;
+}
+.subfolder-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.subfolder-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); font-weight: 600; }
+
+.state-subfolder-btn {
+  margin-top: 10px; height: 38px; padding: 0 32px;
+  background: transparent; border: 2px solid var(--border-hi);
+  border-radius: 10px; color: var(--text-dim); font-weight: 600; font-size: 12px;
+  font-family: inherit; cursor: pointer; letter-spacing: .2px;
+  transition: border-color .15s, color .15s, background .15s, box-shadow .15s;
+}
+.state-subfolder-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.state-subfolder-btn.active {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-dim);
+  font-weight: 700; box-shadow: 0 0 18px var(--accent-glow);
+}
+
 /* ══ EMPTY STATE BROWSE BUTTON ══════════════════════════════════════ */
 .state-browse-btn {
   margin-top: 48px; height: 60px; padding: 0 56px;
@@ -476,11 +535,123 @@ html, body {
   50%      { box-shadow: 0 0 55px rgba(245,158,11,.7), 0 0 110px rgba(245,158,11,.22), 0 8px 28px rgba(245,158,11,.5); }
 }
 
+/* ══ COPY PATH BUTTON ════════════════════════════════════════════════ */
+#fsCopyPathBtn {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  height: 18px; padding: 0 8px;
+  background: transparent; border: 1px solid var(--accent);
+  border-radius: 4px; color: var(--text-muted);
+  font-size: 10px; font-family: inherit; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: color var(--t), border-color var(--t);
+  display: none;
+}
+#fsCopyPathBtn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ══ PAGE NEXT BUTTON ═══════════════════════════════════════════════ */
+#pageNextBtn {
+  position: absolute; right: 264px; top: 50%; transform: translateY(-50%);
+  width: 87px; height: 58px; z-index: 20; padding: 0 6px;
+  background: var(--bg-panel); border: 1px solid var(--border-hi);
+  border-left: 2px solid var(--border-hi);
+  border-radius: 5px 0 0 5px;
+  color: var(--text-dim); font-size: 10px; line-height: 1.35;
+  font-family: inherit; font-weight: 600; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; text-align: center;
+  transition: border-color var(--t), color var(--t), background var(--t);
+}
+#pageNextBtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+/* Opaque wall that clips the filmstrip track so it doesn't show behind the button */
+#fsWall {
+  position: absolute; right: 264px; top: 0; bottom: 0; width: 87px;
+  background: var(--bg-panel); z-index: 19; display: none; pointer-events: none;
+}
+/* Floating thumbnail preview shown when hovering the Next-page button */
+#fsNextPreview {
+  position: fixed; display: none; z-index: 1000; pointer-events: none;
+  overflow: hidden; background: var(--bg-panel);
+  border: 1px solid var(--border-hi); border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.6);
+}
+#fsNextPreview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ══ GRID OVERLAY ════════════════════════════════════════════════════ */
+#gridOverlay {
+  position: fixed; inset: 0; z-index: 9999; overflow-y: auto;
+  background: #000; display: none;
+}
+#gridContainer { display: grid; gap: 0; width: 100%; }
+#gridCloseBtn {
+  position: fixed; top: 14px; right: 14px; z-index: 10000;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2);
+  color: #fff; font-size: 16px; cursor: pointer; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+#gridCloseBtn:hover { background: rgba(255,255,255,.15); }
+#gridScrollPanel {
+  position: fixed; top: 58px; right: 14px; z-index: 10000;
+  background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 10px; padding: 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: 36px;
+}
+#gridScrollBtn {
+  width: 24px; height: 24px; padding: 0;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  color: #fff; border-radius: 6px; flex-shrink: 0;
+  cursor: pointer; font-size: 11px; font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s, color .15s;
+}
+#gridScrollBtn:hover { background: rgba(255,255,255,.2); }
+#gridScrollBtn.active { border-color: var(--accent); color: var(--accent); }
+#gridScrollTrack {
+  width: 24px; height: 90px; margin: 0 auto;
+  position: relative; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+/* thin visible rail, centered inside the wide hit area */
+#gridScrollTrack::before {
+  content: ''; position: absolute; left: 50%; top: 0; bottom: 0;
+  width: 6px; transform: translateX(-50%);
+  background: rgba(255,255,255,.2); border-radius: 3px;
+}
+#gridScrollFill {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 6px; bottom: 0; border-radius: 3px;
+  background: var(--accent); pointer-events: none;
+}
+#gridScrollThumb {
+  position: absolute; left: 50%; transform: translate(-50%, -50%);
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #d0d0d0; box-shadow: 0 1px 5px rgba(0,0,0,.6);
+  cursor: grab; pointer-events: none;
+}
+#gridScrollThumb:active { cursor: grabbing; }
+.grid-cell {
+  aspect-ratio: 1; overflow: hidden; cursor: pointer; position: relative;
+  background: #0a0a0a;
+}
+.grid-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.grid-ico {
+  width: 100%; height: 100%; display: flex; align-items: center;
+  justify-content: center; font-size: 2em; color: var(--text-muted);
+}
+.grid-cell.grid-active::after {
+  content: ''; position: absolute; inset: 0;
+  box-shadow: inset 0 0 0 3px var(--accent); pointer-events: none;
+}
+
 /* ══ STATUS BAR ═════════════════════════════════════════════════════ */
 .statusbar {
   height: 28px; background: var(--bg-panel); border-top: 1px solid var(--border);
   display: flex; align-items: center; padding: 0 14px; gap: 14px;
   flex-shrink: 0; font-size: 11px; color: var(--text-muted);
+  position: relative;
 }
 .sb-progress { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .sb-track { width: 100px; height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
@@ -592,6 +763,7 @@ code {
 
 /* ══ FULLSCREEN ═════════════════════════════════════════════════════ */
 ::backdrop { transition: none !important; animation: none !important; }
+:fullscreen, :-webkit-full-screen { transition: none !important; animation: none !important; }
 :fullscreen .topbar,
 :fullscreen .panel-right,
 :fullscreen .filmstrip,
@@ -614,6 +786,25 @@ code {
   Run <code>run.bat</code> or: <code>python server.py</code></p>
 </div>
 <div id="toast"></div>
+
+<!-- ── FFMPEG INSTALL MODAL ──────────────────────────────────────── -->
+<div id="ffmpegOverlay" onclick="if(event.target===this)closeFfmpegModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-panel);border:1px solid var(--border-hi);border-radius:14px;padding:36px 40px 30px;width:530px;max-width:92vw;box-shadow:0 40px 100px rgba(0,0,0,.9);">
+    <div style="font-size:38px;text-align:center;margin-bottom:14px">🎬</div>
+    <div style="font-size:17px;font-weight:700;color:var(--text);text-align:center;margin-bottom:14px">One more free tool needed</div>
+    <p id="ffmpegModalMsg" style="font-size:13px;color:var(--text-dim);line-height:1.85;margin-bottom:12px;text-align:center"></p>
+    <p style="font-size:12.5px;color:var(--text-dim);line-height:1.85;margin-bottom:26px;text-align:center">
+      <strong style="color:var(--text)">ffmpeg</strong> is a free, open-source tool trusted by millions of people worldwide for video processing. Sift just needs it installed. You don't have to do anything with it yourself. You can let Sift install it for you in about a minute, or download it directly from ffmpeg.org if you prefer.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <button id="ffmpegInstallBtn" onclick="installFfmpeg()" style="height:46px;background:var(--accent);border:none;border-radius:var(--r);color:#000;font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;transition:opacity .15s,filter .15s;display:flex;align-items:center;justify-content:center;gap:10px"><span style="display:inline-block;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:13px solid #000;flex-shrink:0"></span><span>Install automatically. Windows Package Manager</span></button>
+      <a href="https://ffmpeg.org/" target="_blank" style="height:40px;display:flex;align-items:center;justify-content:center;gap:7px;background:transparent;border:1px solid var(--border-hi);border-radius:var(--r);color:var(--text-dim);font-size:12.5px;font-family:inherit;text-decoration:none;cursor:pointer;transition:border-color var(--t),color var(--t)" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='';this.style.color=''">🌐 ffmpeg.org</a>
+      <a href="https://en.wikipedia.org/wiki/FFmpeg" target="_blank" style="height:40px;display:flex;align-items:center;justify-content:center;gap:7px;background:transparent;border:1px solid var(--border-hi);border-radius:var(--r);color:var(--text-dim);font-size:12.5px;font-family:inherit;text-decoration:none;cursor:pointer;transition:border-color var(--t),color var(--t)" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='';this.style.color=''">📖 What is ffmpeg? Wikipedia</a>
+      <button onclick="closeFfmpegModal()" style="height:34px;background:transparent;border:none;color:var(--text-muted);font-size:12px;font-family:inherit;cursor:pointer;margin-top:2px">Skip these files for now</button>
+    </div>
+    <div id="ffmpegInstallStatus" style="margin-top:12px;font-size:11.5px;color:var(--text-muted);text-align:center;min-height:18px;line-height:1.6"></div>
+  </div>
+</div>
 
 <!-- ── ABOUT ──────────────────────────────────────────────────────── -->
 <div id="aboutOverlay" onclick="if(event.target===this)closeAbout()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:none;align-items:center;justify-content:center;">
@@ -646,7 +837,7 @@ code {
   <div class="guide-card">
     <button class="about-close" onclick="closeGuide()">✕</button>
     <div class="guide-title">Getting Started with Sift</div>
-    <div class="guide-subtitle">Sift through your media quickly — no fuss.</div>
+    <div class="guide-subtitle">Sift through your media quickly. No fuss.</div>
 
     <div class="guide-steps">
 
@@ -654,7 +845,7 @@ code {
         <div class="guide-step-num">1</div>
         <div class="guide-step-body">
           <div class="guide-step-title">Open a folder</div>
-          <div class="guide-step-desc">Click <strong>Browse</strong> in the top bar or on the home screen, or paste a folder path directly into the path box and press <kbd>Enter</kbd>. Sift will scan and load all media files it finds.</div>
+          <div class="guide-step-desc">Click <strong>Browse</strong> in the top bar or on the home screen, or paste a folder path directly into the path box and press <kbd>Enter</kbd>. Sift will scan and load all media files it finds. To include files in subfolders, use <strong>Include Subfolders</strong> instead. Large collections are loaded in chunks of 2,000 to keep things running smoothly. A button will appear in the filmstrip to load the next chunk when you're ready.</div>
         </div>
       </div>
 
@@ -662,7 +853,7 @@ code {
         <div class="guide-step-num">2</div>
         <div class="guide-step-body">
           <div class="guide-step-title">Set up your sift destinations</div>
-          <div class="guide-step-desc">In the <strong>Sift Destinations</strong> panel on the right, you'll see two default folders — <em>Save</em> and <em>Delete</em>. Rename them or add up to 5 destinations using <strong>+ Add</strong>. Each destination gets a number key (1–5).</div>
+          <div class="guide-step-desc">In the <strong>Sift Destinations</strong> panel on the right, you'll see two default folders. <em>Save</em> and <em>Delete</em>. Rename them or add up to 5 destinations using <strong>+ Add</strong>. Each destination gets a number key (1–5).</div>
         </div>
       </div>
 
@@ -678,7 +869,7 @@ code {
         <div class="guide-step-num">4</div>
         <div class="guide-step-body">
           <div class="guide-step-title">Navigate freely</div>
-          <div class="guide-step-desc">Use the <kbd>←</kbd> <kbd>→</kbd> arrow keys, the on-screen arrows, or click any thumbnail in the filmstrip at the bottom to jump to any file. Already-sorted files show a colored badge — click it to unsort and move them back.</div>
+          <div class="guide-step-desc">Use the <kbd>←</kbd> <kbd>→</kbd> arrow keys, the on-screen arrows, or click any thumbnail in the filmstrip at the bottom to jump to any file. Already-sorted files show a colored badge. Click it to unsort and move them back.</div>
         </div>
       </div>
 
@@ -707,7 +898,23 @@ code {
       </div>
 
       <div class="guide-divider">
-        <span>Optional extras</span>
+        <span>Additional Features</span>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Strip Metadata</div>
+          <div class="guide-step-desc">Click <strong>✂ Strip Metadata</strong> in the top bar to duplicate any folder with all embedded metadata scrubbed from every file. Including GPS location tags, camera make/model, timestamps, and other personally identifying information that gets baked into photos and videos without you knowing. The original folder is untouched; a new folder is created next to it with <em>_no_metadata</em> appended to the name. Images (JPG, PNG, WebP) are cleaned using the built-in image library. Video and audio files require <strong>ffmpeg</strong>. If it isn't installed, Sift will prompt you to install it automatically via Windows Package Manager (one click, takes about a minute), or you can skip those files for now and come back later.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Grid view</div>
+          <div class="guide-step-desc">Click <strong>⊞ Grid</strong> in the Grid Display panel to see all your loaded images at once in a full-window grid. Adjust the number of columns with the arrows or number field. Click any image to jump straight to it. Use the autoscroll button to browse hands-free, with an adjustable speed slider.</div>
+        </div>
       </div>
 
       <div class="guide-step">
@@ -730,7 +937,31 @@ code {
         <div class="guide-step-num guide-step-num-opt">●</div>
         <div class="guide-step-body">
           <div class="guide-step-title">Video &amp; audio playback speed</div>
-          <div class="guide-step-desc">When viewing a video or audio file, use the <strong>Playback Speed</strong> buttons (1×, 2×, 3×, 4×) to speed through footage quickly — great for scanning long clips. Click <strong>★ Set as Default</strong> to remember your preferred speed across sessions.</div>
+          <div class="guide-step-desc">When viewing a video or audio file, use the <strong>Playback Speed</strong> buttons (1×, 2×, 3×, 4×) to speed through footage quickly. Great for scanning long clips. Click <strong>★ Set as Default</strong> to remember your preferred speed across sessions.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Display on Launch</div>
+          <div class="guide-step-desc">Choose whether Sift reopens your last folder automatically when it starts, or opens to a blank state. Set your preference using the <strong>Display on Launch</strong> toggle in the controls panel.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Light &amp; dark mode</div>
+          <div class="guide-step-desc">Switch between light and dark themes using the <strong>Theme</strong> toggle in the controls panel. Your preference is saved and applied automatically on next launch.</div>
+        </div>
+      </div>
+
+      <div class="guide-step">
+        <div class="guide-step-num guide-step-num-opt">●</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Copy Path</div>
+          <div class="guide-step-desc">The <strong>Copy Path</strong> button in the status bar (centered below the selected thumbnail) copies the full file path of the current file to your clipboard. Handy for pasting into other apps.</div>
         </div>
       </div>
 
@@ -751,13 +982,15 @@ code {
   <div class="vr"></div>
   <div class="browse-wrap highlight" id="browseWrap">
     <button class="browse-btn-top" onclick="browseFolder()">📁 Browse</button>
+    <button class="subfolder-btn" id="subfoldersBtn" onclick="browseWithSubfolders()" title="Browse and include all subfolders">📂 Include subfolders</button>
   </div>
-  <button class="tbtn" style="border-color:#4ade80;color:#4ade80" onclick="openGuide()">Get Started</button>
+  <button class="tbtn tbtn-green" onclick="openGuide()">Get Started</button>
   <button class="tbtn tbtn-accent" onclick="openAbout()">About Sift</button>
   <input class="path-input" id="pathInput"
          placeholder="Paste or type a folder path, then press Enter…"
          onkeydown="if(event.key==='Enter') loadFolderFromInput()">
   <button class="tbtn" id="btnReload" onclick="reloadFolder()" title="Re-scan folder">↺ Load</button>
+  <button class="tbtn tbtn-red" id="btnStripMeta" onclick="stripMetadata()" title="Duplicate folder and remove embedded metadata from all media files">✂ Strip Metadata</button>
   <span id="counter" style="display:none"></span>
 </div>
 
@@ -774,12 +1007,13 @@ code {
           <a href="https://x.com/NimbleCloud13" target="_blank" class="state-link">𝕏 @NimbleCloud13</a>
         </div>
         <button class="state-browse-btn" onclick="browseFolder()">📁 Browse</button>
-        <div class="state-support">Your support would mean a lot for my family</div>
+        <button class="state-subfolder-btn" id="startupSubfoldersBtn" onclick="browseWithSubfolders()">📂 Include subfolders</button>
+        <div class="state-support" style="margin-top:24px">Your support would mean a lot for my family</div>
         <a href="https://buymeacoffee.com/nimblecloud13" target="_blank" class="state-link" style="font-size:12px;margin-top:4px;display:inline-block">Buy me a coffee ☕</a>
         <div class="state-filter-msg" id="stateFilterMsg" style="display:none"></div>
       </div>
-      <button class="nav-btn prev" id="navPrev" onclick="navigate(-1)" style="display:none">‹</button>
-      <button class="nav-btn next" id="navNext" onclick="navigate(1)"  style="display:none">›</button>
+      <button class="nav-btn prev" id="navPrev" style="display:none">‹</button>
+      <button class="nav-btn next" id="navNext" style="display:none">›</button>
       <div class="file-chip" id="fileChip" style="display:none"></div>
       <div class="viewer-sort-badge" id="viewerSortBadge" style="display:none" onclick="unsortCurrent()"></div>
     </div>
@@ -788,6 +1022,8 @@ code {
     <div class="filmstrip" id="filmstrip" style="display:none">
       <div class="fs-track" id="fsTrack"></div>
       <div class="fs-cursor"></div>
+      <div id="fsWall"></div>
+      <button id="pageNextBtn" style="display:none" onclick="loadNextPage()"></button>
     </div>
 
   </div>
@@ -852,6 +1088,26 @@ code {
       <button class="rp-sm-btn" onclick="saveDefaultSpeed()">★ Set as Default</button>
     </div>
 
+    <!-- Grid Display -->
+    <div class="ss-panel" id="gridPanel">
+      <div class="ss-header">
+        <span class="rp-label">Grid Display</span>
+      </div>
+      <div class="ss-play-col">
+        <button class="filter-btn" id="gridBtn" onclick="toggleGrid()">⊞ Grid</button>
+      </div>
+      <div class="ss-right">
+        <div class="ss-speed-row">
+          <input type="number" id="gridColsInput" class="ss-num" min="2" max="10" step="1" value="4" oninput="setGridCols(+this.value)">
+          <span class="ss-unit">columns</span>
+          <div class="ss-arrows">
+            <button class="ss-arrow" id="gridColsUp" onclick="setGridCols(gridCols+1)">▲</button>
+            <button class="ss-arrow" id="gridColsDn" onclick="setGridCols(gridCols-1)">▼</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Slideshow -->
     <div class="ss-panel" id="ssPanel">
       <div class="ss-header">
@@ -883,6 +1139,15 @@ code {
       </div>
     </div>
 
+    <!-- Theme -->
+    <div class="rp-section">
+      <div class="rp-label" style="margin-bottom:8px">Theme</div>
+      <div class="toggle-row">
+        <button class="tgl-btn" id="themeDark"  onclick="setTheme('dark')">Dark</button>
+        <button class="tgl-btn" id="themeLight" onclick="setTheme('light')">Light</button>
+      </div>
+    </div>
+
     <!-- Shortcuts -->
     <div class="shortcut-box" id="shortcutBox">
       <div class="sc-head">Keyboard Shortcuts</div>
@@ -902,12 +1167,29 @@ code {
 
 <!-- ── STATUS BAR ─────────────────────────────────────────────────── -->
 <div class="statusbar">
-  <span id="statusText">Ready — open a folder to begin</span>
+  <span id="statusText">Ready. Open a folder to begin</span>
+  <button id="fsCopyPathBtn" onclick="copyCurrentPath()" title="Copy file path">Copy Path</button>
   <div class="sb-progress">
     <div class="sb-track"><div class="sb-fill" id="pFill" style="width:0%"></div></div>
     <span id="pLabel">0%</span>
   </div>
 </div>
+
+<!-- Grid overlay. Full-window image grid -->
+<div id="gridOverlay">
+  <button id="gridCloseBtn" onclick="exitGrid()" title="Close grid">✕</button>
+  <div id="gridScrollPanel">
+    <button id="gridScrollBtn" onclick="toggleGridScroll()" title="Autoscroll">▶</button>
+    <div id="gridScrollTrack" title="Scroll speed">
+      <div id="gridScrollFill"></div>
+      <div id="gridScrollThumb"></div>
+    </div>
+  </div>
+  <div id="gridContainer"></div>
+</div>
+
+<!-- Floating preview shown when hovering the Next-page button -->
+<div id="fsNextPreview"><img id="fsNextPreviewImg" alt=""></div>
 
 <!-- hidden file list (JS compatibility) -->
 <div id="fileList" style="display:none"></div>
@@ -939,9 +1221,12 @@ let busy         = false;
 let undoStack    = [];
 let defaultSpeed  = parseFloat(localStorage.getItem('ms_speed') || '1');
 let currentSpeed  = defaultSpeed;
-let startupMode      = localStorage.getItem('ms_startup') || 'last';
+let startupMode      = localStorage.getItem('ms_startup') || 'blank';
 let defaultSortOrder = localStorage.getItem('ms_sort_order') || 'asc';
 let sortOrder        = defaultSortOrder;
+let includeSubfolders = localStorage.getItem('ms_subfolders') === 'true';
+let fsPageOffset = 0;   // current recursive page offset
+let fsHasMore    = false; // whether more files exist beyond current page
 
 function loadFolders() {
   const DEFAULTS = [{ name: 'Save', ci: 0 }, { name: 'Delete', ci: 1 }];
@@ -970,11 +1255,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderSortButtons();
   renderSpeedButtons();
   initSsControls();
+  _initNavButtonHold();
+  _initFsNavHover();
+  _initPageNextPreview();
+  _initGridScrollSlider();
 
   document.getElementById('startupLast').classList.toggle('active',  startupMode === 'last');
   document.getElementById('startupBlank').classList.toggle('active', startupMode === 'blank');
+  const _savedTheme = localStorage.getItem('ms_theme') || 'dark';
+  setTheme(_savedTheme);
   document.getElementById('sortAsc').classList.toggle('active',  sortOrder === 'asc');
   document.getElementById('sortDesc').classList.toggle('active', sortOrder === 'desc');
+  const _sfBtn = document.getElementById('subfoldersBtn');
+  const _sfBtn2 = document.getElementById('startupSubfoldersBtn');
+  if (_sfBtn)  _sfBtn.classList.toggle('active',  includeSubfolders);
+  if (_sfBtn2) _sfBtn2.classList.toggle('active', includeSubfolders);
 
   const lastFolder = localStorage.getItem('ms_last_folder');
   if (startupMode === 'last' && lastFolder) {
@@ -1124,14 +1419,159 @@ function setStartup(mode) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Theme
+═══════════════════════════════════════════════════════════════ */
+function setTheme(mode) {
+  localStorage.setItem('ms_theme', mode);
+  document.documentElement.classList.toggle('light', mode === 'light');
+  document.getElementById('themeDark').classList.toggle('active',  mode === 'dark');
+  document.getElementById('themeLight').classList.toggle('active', mode === 'light');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Browse with subfolders
+═══════════════════════════════════════════════════════════════ */
+async function browseWithSubfolders() {
+  try {
+    const resp = await fetch('/api/browse', { method: 'POST' });
+    const data = await resp.json();
+    if (data.path) {
+      includeSubfolders = true;
+      localStorage.setItem('ms_subfolders', 'true');
+      document.getElementById('pathInput').value = data.path;
+      await loadFolder(data.path);
+    }
+  } catch { toast('Cannot reach server'); }
+}
+
+function copyCurrentPath() {
+  if (!files.length) return;
+  const f = files[idx];
+  const folder = document.getElementById('pathInput').value.trim();
+  const parts = [];
+  if (f.subfolder) parts.push(f.subfolder);
+  parts.push(f.sorted ? (f.sortedAs || f.name) : f.name);
+  const fullPath = folder + '\\' + parts.join('\\');
+  navigator.clipboard.writeText(fullPath).then(() => {
+    const btn = document.getElementById('fsCopyPathBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  }).catch(() => toast('Could not copy'));
+}
+
+/* Returns the /media/… path for a file, accounting for subfolder and sort state */
+function mediaPathOf(f) {
+  if (f.sorted) {
+    return encodeURIComponent(f.sorted) + '/' + encodeURIComponent(f.sortedAs || f.name);
+  }
+  if (f.subfolder) {
+    return f.subfolder.split('/').map(encodeURIComponent).join('/') + '/' + encodeURIComponent(f.name);
+  }
+  return encodeURIComponent(f.name);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Folder browsing
 ═══════════════════════════════════════════════════════════════ */
 async function browseFolder() {
   try {
     const resp = await fetch('/api/browse', { method: 'POST' });
     const data = await resp.json();
-    if (data.path) { document.getElementById('pathInput').value = data.path; await loadFolder(data.path); }
+    if (data.path) {
+      includeSubfolders = false;
+      localStorage.setItem('ms_subfolders', 'false');
+      document.getElementById('pathInput').value = data.path;
+      await loadFolder(data.path);
+    }
   } catch { toast('Cannot reach server'); }
+}
+
+let _pendingStripPath   = null;
+let _pendingStripResult = null;
+
+async function stripMetadata() {
+  try {
+    toast('Select a folder…');
+    const br = await fetch('/api/browse', { method: 'POST' });
+    const { path } = await br.json();
+    if (!path) return;
+    await _doStrip(path);
+  } catch { toast('Cannot reach server'); }
+}
+
+async function _doStrip(path) {
+  toast('Stripping metadata…');
+  try {
+    const r = await fetch('/api/strip_metadata', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { toast(d.error || 'Strip failed'); return; }
+
+    if (d.ffmpeg_skipped > 0) {
+      // Some video files need ffmpeg. Show the install prompt
+      _pendingStripPath   = path;
+      _pendingStripResult = d;
+      const n = d.ffmpeg_skipped;
+      const s = d.stripped;
+      document.getElementById('ffmpegModalMsg').innerHTML =
+        `<strong style="color:var(--text)">${n} video file${n !== 1 ? 's' : ''}</strong> in this folder ` +
+        `couldn't be cleaned because ffmpeg isn't installed yet.` +
+        (s > 0 ? `<br>The <strong style="color:var(--text)">${s} image and audio file${s !== 1 ? 's' : ''}</strong> were already cleaned successfully.` : '');
+      document.getElementById('ffmpegInstallStatus').textContent = '';
+      const btn = document.getElementById('ffmpegInstallBtn');
+      btn.disabled = false;
+      btn.innerHTML = '<span style="display:inline-block;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:13px solid #000;flex-shrink:0"></span><span>Install automatically. Windows Package Manager</span>';
+      btn.style.opacity = '1';
+      document.getElementById('ffmpegOverlay').style.display = 'flex';
+      return;
+    }
+
+    toast(`✓ ${d.stripped} file${d.stripped !== 1 ? 's' : ''} cleaned → ${d.dest_name}`);
+  } catch { toast('Cannot reach server'); }
+}
+
+function closeFfmpegModal() {
+  document.getElementById('ffmpegOverlay').style.display = 'none';
+  if (_pendingStripResult) {
+    const d = _pendingStripResult;
+    toast(`✓ ${d.stripped} cleaned, ${d.ffmpeg_skipped} skipped (ffmpeg needed) → ${d.dest_name}`);
+  }
+  _pendingStripPath   = null;
+  _pendingStripResult = null;
+}
+
+async function installFfmpeg() {
+  const btn    = document.getElementById('ffmpegInstallBtn');
+  const status = document.getElementById('ffmpegInstallStatus');
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  btn.textContent = 'Installing… this may take a minute';
+  status.textContent = 'Please wait and keep Sift open. This only needs to happen once.';
+  try {
+    const r = await fetch('/api/install_ffmpeg', { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      status.textContent = d.error || 'Installation failed.';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.innerHTML = '<span style="display:inline-block;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:13px solid #000;flex-shrink:0"></span><span>Retry installation</span>';
+      return;
+    }
+    status.textContent = '✓ ffmpeg installed! Cleaning remaining files…';
+    const path = _pendingStripPath;
+    _pendingStripPath   = null;
+    _pendingStripResult = null;
+    document.getElementById('ffmpegOverlay').style.display = 'none';
+    await _doStrip(path);
+  } catch {
+    status.textContent = 'Cannot reach server.';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.textContent = '⬇ Retry installation';
+  }
 }
 async function loadFolderFromInput() {
   const path = document.getElementById('pathInput').value.trim();
@@ -1142,20 +1582,63 @@ async function reloadFolder() {
   if (path) await loadFolder(path);
 }
 
+function _updatePageBtn(path, pageSize) {
+  const btn  = document.getElementById('pageNextBtn');
+  const wall = document.getElementById('fsWall');
+  if (!btn) return;
+  const show = fsHasMore || fsPageOffset > 0;
+  btn.style.display  = show ? '' : 'none';
+  if (wall) wall.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  const start = (fsPageOffset + 1).toLocaleString();
+  const end   = (fsPageOffset + pageSize).toLocaleString();
+  if (fsHasMore) {
+    btn.innerHTML = `<span>${start}–${end}</span><span>Next 2,000 ›</span>`;
+  } else {
+    btn.innerHTML = `<span>${start}–${end}</span><span>↺ Restart</span>`;
+  }
+  btn._path = path;
+  // Pre-fetch thumbnail for the first image on the next page
+  btn._peekSrc = null;
+  if (fsHasMore) {
+    const nextOffset = fsPageOffset + pageSize;
+    fetch(`/api/peek?path=${encodeURIComponent(path)}&offset=${nextOffset}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.found) btn._peekSrc = '/media/' + d.path.split('/').map(encodeURIComponent).join('/');
+      })
+      .catch(() => {});
+  }
+}
+
+async function loadNextPage() {
+  const path = document.getElementById('pageNextBtn')._path
+             || document.getElementById('pathInput').value.trim();
+  if (!path) return;
+  const nextOffset = fsHasMore ? fsPageOffset + 2000 : 0;
+  await loadFolder(path, nextOffset);
+}
+
 /* ═══════════════════════════════════════════════════════════════
    Load files
 ═══════════════════════════════════════════════════════════════ */
-async function loadFolder(path) {
+async function loadFolder(path, offset = 0) {
+  if (offset === 0) { fsPageOffset = 0; fsHasMore = false; }
   busy = true;
+  document.getElementById('statusText').textContent = includeSubfolders ? 'Scanning subfolders…' : 'Loading…';
   try {
     const resp = await fetch('/api/open', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path }),
+      body: JSON.stringify({ path, recursive: includeSubfolders, offset }),
     });
     const data = await resp.json();
     if (!resp.ok || data.error) { toast(data.error || 'Error'); busy = false; return; }
 
-    allFiles = data.files.map(f => ({ ...f, sorted: null }));
+    fsPageOffset = offset;
+    fsHasMore    = !!data.truncated;
+    _updatePageBtn(path, data.files.length);
+
+    allFiles = data.files.map(f => ({ ...f, sorted: null, subfolder: f.subfolder || '' }));
     applyFilter(); undoStack = [];
     document.getElementById('pathInput').value = data.folder;
     localStorage.setItem('ms_last_folder', data.folder);
@@ -1187,7 +1670,7 @@ function loadMediaDurations() {
     };
     el.addEventListener('loadedmetadata', () => settle(el.duration));
     el.addEventListener('error', () => settle(null));
-    el.src = '/media/' + encodeURIComponent(f.name);
+    el.src = '/media/' + mediaPathOf(f);
   });
 }
 
@@ -1208,10 +1691,7 @@ async function showFile(i) {
   viewer.classList.remove('video-mode');
 
   const f = files[idx];
-  const mediaPath = f.sorted
-    ? encodeURIComponent(f.sorted) + '/' + encodeURIComponent(f.sortedAs || f.name)
-    : encodeURIComponent(f.name);
-  const url = '/media/' + mediaPath + '?_=' + Date.now();
+  const url = '/media/' + mediaPathOf(f) + '?_=' + Date.now();
   const mtype = (f.mediaType || f.type);
 
   if (mtype === 'image') {
@@ -1237,11 +1717,13 @@ async function showFile(i) {
 
   document.getElementById('fileChip').style.display = 'none';
   document.getElementById('counter').textContent = `${idx + 1} / ${files.length}`;
-  document.getElementById('statusText').textContent = `${f.name}  —  ${fmtBytes(f.size)}`;
+  document.getElementById('statusText').textContent = `${f.name}  ·  ${fmtBytes(f.size)}`;
   document.getElementById('navPrev').disabled = idx === 0;
   document.getElementById('navNext').disabled = idx === files.length - 1;
   setSortButtonsDisabled(false); highlightList(idx); highlightFilmstrip(idx);
-  updateViewerSortBadge(); clearFilterMsg();
+  updateViewerSortBadge(); clearFilterMsg(); updateGridActive();
+  const cpBtn = document.getElementById('fsCopyPathBtn');
+  if (cpBtn) cpBtn.style.display = 'block';
 }
 
 function navigate(delta) { const ni = idx + delta; if (ni >= 0 && ni < files.length) showFile(ni); }
@@ -1293,6 +1775,7 @@ async function unsortCurrent() {
     document.getElementById('undoBtn').disabled = undoStack.length === 0;
     f.sorted = null; f.sortedAs = null;
     if (data.restored_name && data.restored_name !== f.name) f.name = data.restored_name;
+    f.subfolder = '';  // file is now at src_folder root after undo
     applyFilter(); toast('↩ File unsorting'); updateStats(); renderList(); busy = false;
     updateFilmstripBadge(idx);
     await showFile(idx);
@@ -1312,7 +1795,11 @@ async function sortCurrent(folderIdx) {
   try {
     const isResort = !!(f.sorted);
     const payload = { filename: f.sortedAs || f.name, folder };
-    if (isResort) payload.src_subfolder = f.sorted;
+    if (isResort) {
+      payload.src_subfolder = f.sorted;
+    } else if (f.subfolder) {
+      payload.src_subfolder = f.subfolder;
+    }
     const resp = await fetch('/api/sort', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1355,8 +1842,8 @@ async function undoSort() {
     if (!resp.ok || !data.ok) { toast(data.error || 'Undo failed'); busy = false; setSortButtonsDisabled(false); return; }
     undoStack.pop();
     const f = allFiles.find(x => x.name === last.origName) || allFiles.find(x => x.name === last.destName);
-    if (f) { f.sorted = null; f.sortedAs = null; if (data.restored_name && data.restored_name !== f.name) f.name = data.restored_name; }
-    applyFilter(); toast('Undo — file restored'); updateStats(); renderList(); busy = false;
+    if (f) { f.sorted = null; f.sortedAs = null; f.subfolder = ''; if (data.restored_name && data.restored_name !== f.name) f.name = data.restored_name; }
+    applyFilter(); toast('Undo. File restored'); updateStats(); renderList(); busy = false;
     const restoredName = (f && data.restored_name) ? data.restored_name : last.origName;
     const restoredIdx  = files.findIndex(x => x.name === restoredName);
     updateFilmstripBadge(restoredIdx >= 0 ? restoredIdx : 0);
@@ -1441,7 +1928,7 @@ function highlightList(i) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Filmstrip — static center frame, track slides left/right
+   Filmstrip. Static center frame, track slides left/right
 ═══════════════════════════════════════════════════════════════ */
 const FS_ITEM_W = 58, FS_GAP = 4, FS_STEP = 58 + 4;
 
@@ -1465,7 +1952,7 @@ function buildFsItem(f, i) {
   if (t === 'image') {
     const img = document.createElement('img');
     img.className = 'fs-thumb'; img.loading = 'lazy'; img.alt = '';
-    img.src = '/media/' + encodeURIComponent(f.name);
+    img.src = '/media/' + mediaPathOf(f);
     item.appendChild(img);
   } else if (t === 'video') {
     const img = document.createElement('img');
@@ -1522,10 +2009,102 @@ function highlightFilmstrip(newIdx) {
   positionFilmstrip(true);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Filmstrip drag-scroll + inertia ("throw" behaviour)
+═══════════════════════════════════════════════════════════════ */
+(function () {
+  const FRICTION    = 0.96;   // high = long glide (like touchscreen)
+  const STOP_VEL    = 0.3;    // px/frame to stop and snap
+  const DRAG_THRESH = 4;      // px before a click becomes a drag
+  const VEL_WINDOW  = 80;     // ms window to average velocity over
+  const VEL_BOOST   = 1.4;    // amplify throw speed slightly
+
+  let drag = false, didDrag = false;
+  let startX = 0, startLeft = 0;
+  let vel = 0, raf = null;
+  let samples = [];            // [{x, t}] for velocity window
+
+  const trackEl = () => document.getElementById('fsTrack');
+  const stripEl = () => document.getElementById('filmstrip');
+
+  function getLeft() { const t = trackEl(); return t ? parseFloat(t.style.left) || 0 : 0; }
+  function setLeft(x) { const t = trackEl(); if (t) { t.style.transition = 'none'; t.style.left = x + 'px'; } }
+
+  function clampLeft(x) {
+    const strip = stripEl(); if (!strip || !files.length) return x;
+    const cx = strip.clientWidth / 2;
+    const minL = cx - (files.length - 1) * FS_STEP - FS_ITEM_W / 2;
+    const maxL = cx - FS_ITEM_W / 2;
+    return Math.max(minL, Math.min(maxL, x));
+  }
+
+  function snapNearest() {
+    const strip = stripEl(); if (!strip || !files.length) return;
+    const cx = strip.clientWidth / 2;
+    const near = Math.round((cx - getLeft() - FS_ITEM_W / 2) / FS_STEP);
+    showFile(Math.max(0, Math.min(files.length - 1, near)));
+  }
+
+  function inertia() {
+    vel *= FRICTION;
+    if (Math.abs(vel) < STOP_VEL) { vel = 0; snapNearest(); return; }
+    setLeft(clampLeft(getLeft() + vel));
+    raf = requestAnimationFrame(inertia);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const strip = document.getElementById('filmstrip');
+    if (!strip) return;
+
+    strip.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      cancelAnimationFrame(raf);
+      drag = true; didDrag = false;
+      startX = e.clientX; startLeft = getLeft();
+      vel = 0; samples = [{ x: e.clientX, t: performance.now() }];
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > DRAG_THRESH) didDrag = true;
+      setLeft(clampLeft(startLeft + dx));
+      const now = performance.now();
+      samples.push({ x: e.clientX, t: now });
+      // Keep only the recent window
+      const cutoff = now - VEL_WINDOW;
+      while (samples.length > 2 && samples[0].t < cutoff) samples.shift();
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!drag) return;
+      drag = false;
+      const t = trackEl(); if (t) t.style.transition = '';
+      // Compute velocity from the sampled window
+      if (samples.length >= 2) {
+        const s0 = samples[0], s1 = samples[samples.length - 1];
+        const dt = s1.t - s0.t;
+        vel = dt > 0 ? (s1.x - s0.x) / dt * 16 * VEL_BOOST : 0;
+      } else {
+        vel = 0;
+      }
+      if (Math.abs(vel) > STOP_VEL) {
+        raf = requestAnimationFrame(inertia);
+      } else {
+        snapNearest();
+      }
+    });
+
+    // Suppress item clicks that were actually drags (capture phase)
+    strip.addEventListener('click', e => {
+      if (didDrag) { e.stopPropagation(); didDrag = false; }
+    }, true);
+  });
+})();
+
 function captureVideoThumb(f, imgEl, icoEl) {
-  const mediaPath = f.sorted
-    ? encodeURIComponent(f.sorted) + '/' + encodeURIComponent(f.sortedAs || f.name)
-    : encodeURIComponent(f.name);
+  const mediaPath = mediaPathOf(f);
   const vid = document.createElement('video');
   vid.preload = 'metadata'; vid.muted = true; vid.playsInline = true;
   vid.crossOrigin = 'anonymous';
@@ -1627,6 +2206,31 @@ const _origShowFile = showFile;
 showFile = async function(i) { resetZoom(); await _origShowFile(i); };
 
 /* ═══════════════════════════════════════════════════════════════
+   Hold-to-fast-scroll (shared by keyboard arrows + nav buttons)
+═══════════════════════════════════════════════════════════════ */
+let _navHold = { tid: null, iid: null };
+function _navHoldStart(delta) {
+  clearTimeout(_navHold.tid); clearInterval(_navHold.iid);
+  _navHold.tid = setTimeout(() => {
+    _navHold.iid = setInterval(() => navigate(delta), 100);
+  }, 380);
+}
+function _navHoldStop() {
+  clearTimeout(_navHold.tid); clearInterval(_navHold.iid);
+  _navHold.tid = null; _navHold.iid = null;
+}
+
+function _initNavButtonHold() {
+  const prev = document.getElementById('navPrev');
+  const next = document.getElementById('navNext');
+  prev.addEventListener('mousedown', e => { e.preventDefault(); navigate(-1); _navHoldStart(-1); });
+  next.addEventListener('mousedown', e => { e.preventDefault(); navigate(1);  _navHoldStart(1);  });
+  window.addEventListener('mouseup',   _navHoldStop);
+  prev.addEventListener('mouseleave',  _navHoldStop);
+  next.addEventListener('mouseleave',  _navHoldStop);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Keyboard shortcuts
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('keydown', e => {
@@ -1637,13 +2241,22 @@ document.addEventListener('keydown', e => {
     return;
   }
   switch (e.key) {
-    case 'ArrowLeft':  e.preventDefault(); navigate(-1); break;
-    case 'ArrowRight': e.preventDefault(); navigate(1);  break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      if (!e.repeat) { navigate(-1); _navHoldStart(-1); }
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      if (!e.repeat) { navigate(1); _navHoldStart(1); }
+      break;
     case 'z': case 'Z': if (!e.ctrlKey) { e.preventDefault(); undoSort(); } break;
     case ' ': if (document.querySelector('#viewer video, #viewer audio')) { e.preventDefault(); vcTogglePlay(); } break;
     case 'b': case 'B': e.preventDefault(); browseFolder(); break;
     case 'f': case 'F': e.preventDefault(); toggleFullscreen(); break;
   }
+});
+document.addEventListener('keyup', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') _navHoldStop();
 });
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1679,6 +2292,7 @@ function toggleFullscreen() {
   else document.exitFullscreen();
 }
 let _fsTimer = null, _fsMouseReady = false, _ssPanelParent = null, _ssPanelSibling = null;
+let _fsHoveringNav = false;
 
 function _fsShowControls() {
   const panel = document.getElementById('ssPanel');
@@ -1688,10 +2302,28 @@ function _fsShowControls() {
 }
 
 function _fsHideControls() {
+  if (_fsHoveringNav) return; // keep visible while cursor is on an arrow button
   const panel = document.getElementById('ssPanel');
   panel.style.opacity = '0'; panel.style.pointerEvents = 'none';
   document.getElementById('navPrev').classList.remove('fs-nav-show');
   document.getElementById('navNext').classList.remove('fs-nav-show');
+}
+
+function _initFsNavHover() {
+  ['navPrev', 'navNext'].forEach(id => {
+    const btn = document.getElementById(id);
+    btn.addEventListener('mouseenter', () => {
+      if (!document.fullscreenElement) return;
+      _fsHoveringNav = true;
+      clearTimeout(_fsTimer);
+      _fsShowControls();
+    });
+    btn.addEventListener('mouseleave', () => {
+      if (!document.fullscreenElement) return;
+      _fsHoveringNav = false;
+      if (_fsMouseReady) _fsTimer = setTimeout(_fsHideControls, 500);
+    });
+  });
 }
 
 document.addEventListener('fullscreenchange', () => {
@@ -1750,6 +2382,183 @@ function initSsControls() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Page-next button: hover thumbnail preview
+═══════════════════════════════════════════════════════════════ */
+function _initPageNextPreview() {
+  const btn     = document.getElementById('pageNextBtn');
+  const preview = document.getElementById('fsNextPreview');
+  const img     = document.getElementById('fsNextPreviewImg');
+  if (!btn || !preview || !img) return;
+  const PREVIEW_W = 120, PREVIEW_H = 90;
+  btn.addEventListener('mouseenter', () => {
+    if (!btn._peekSrc) return;
+    img.src = btn._peekSrc;
+    const rect = btn.getBoundingClientRect();
+    preview.style.width  = PREVIEW_W + 'px';
+    preview.style.height = PREVIEW_H + 'px';
+    preview.style.left   = (rect.left + (rect.width - PREVIEW_W) / 2) + 'px';
+    preview.style.top    = (rect.top - PREVIEW_H - 6) + 'px';
+    preview.style.display = '';
+  });
+  btn.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Grid Display
+═══════════════════════════════════════════════════════════════ */
+let gridMode = false, gridCols = 4;
+
+function toggleGrid() {
+  if (!files.length) return;
+  if (gridMode) { exitGrid(); }
+  else {
+    gridMode = true;
+    document.getElementById('gridBtn').classList.add('active');
+    renderGrid();
+    document.getElementById('gridOverlay').style.display = 'block';
+  }
+}
+
+function exitGrid() {
+  stopGridScroll();
+  gridMode = false;
+  const btn = document.getElementById('gridBtn');
+  if (btn) btn.classList.remove('active');
+  const overlay = document.getElementById('gridOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+let gridScrolling = false, gridScrollSpeed = 80;
+let _gridScrollRaf = null, _gridScrollLast = null;
+
+function toggleGridScroll() {
+  gridScrolling ? stopGridScroll() : startGridScroll();
+}
+function startGridScroll() {
+  gridScrolling = true;
+  const btn = document.getElementById('gridScrollBtn');
+  if (btn) { btn.classList.add('active'); btn.textContent = '⏹'; }
+  _gridScrollLast = null;
+  _gridScrollRaf = requestAnimationFrame(_gridScrollStep);
+}
+function stopGridScroll() {
+  gridScrolling = false;
+  const btn = document.getElementById('gridScrollBtn');
+  if (btn) { btn.classList.remove('active'); btn.textContent = '▶'; }
+  if (_gridScrollRaf) { cancelAnimationFrame(_gridScrollRaf); _gridScrollRaf = null; }
+  _gridScrollLast = null;
+}
+function _gridScrollStep(ts) {
+  if (!gridScrolling || !gridMode) { stopGridScroll(); return; }
+  const overlay = document.getElementById('gridOverlay');
+  if (!overlay) { stopGridScroll(); return; }
+  if (_gridScrollLast !== null) {
+    overlay.scrollTop += gridScrollSpeed * (ts - _gridScrollLast) / 1000;
+    if (overlay.scrollTop >= overlay.scrollHeight - overlay.clientHeight) overlay.scrollTop = 0;
+  }
+  _gridScrollLast = ts;
+  _gridScrollRaf = requestAnimationFrame(_gridScrollStep);
+}
+function setGridScrollSpeed(v) {
+  gridScrollSpeed = Math.max(5, Math.min(400, v));
+}
+
+function _initGridScrollSlider() {
+  const track = document.getElementById('gridScrollTrack');
+  const thumb = document.getElementById('gridScrollThumb');
+  const fill  = document.getElementById('gridScrollFill');
+  if (!track || !thumb || !fill) return;
+
+  // top = fast (400), bottom = slow (5)
+  let _speed = 80;
+
+  function applyY(clientY) {
+    const rect = track.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+    _speed = Math.round((1 - pct) * 395 + 5); // 400→5 top→bottom
+    setGridScrollSpeed(_speed);
+    updateThumbPos(pct);
+  }
+
+  function updateThumbPos(pct) {
+    const px = pct * track.offsetHeight;
+    thumb.style.top = px + 'px';
+    // fill goes from thumb down to bottom
+    fill.style.top    = px + 'px';
+    fill.style.bottom = '';
+    fill.style.height = (track.offsetHeight - px) + 'px';
+  }
+
+  // Init at speed 80 (~top-ish)
+  const initPct = 1 - (80 - 5) / 395;
+  requestAnimationFrame(() => updateThumbPos(initPct));
+
+  let dragging = false;
+  track.addEventListener('pointerdown', e => {
+    dragging = true;
+    track.setPointerCapture(e.pointerId);
+    applyY(e.clientY);
+    e.preventDefault();
+  });
+  track.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    applyY(e.clientY);
+  });
+  track.addEventListener('pointerup',    () => { dragging = false; });
+  track.addEventListener('pointercancel',() => { dragging = false; });
+}
+
+function renderGrid() {
+  const container = document.getElementById('gridContainer');
+  if (!container) return;
+  container.style.gridTemplateColumns = `repeat(${gridCols}, 1fr)`;
+  container.innerHTML = '';
+  files.forEach((f, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell' + (i === idx ? ' grid-active' : '');
+    cell.dataset.idx = i;
+    const t = f.mediaType || f.type;
+    if (t === 'image') {
+      const img = document.createElement('img');
+      img.src = '/media/' + mediaPathOf(f);
+      img.loading = 'lazy'; img.alt = '';
+      cell.appendChild(img);
+    } else {
+      const ico = document.createElement('div');
+      ico.className = 'grid-ico';
+      ico.textContent = t === 'video' ? '🎬' : '🔊';
+      cell.appendChild(ico);
+    }
+    cell.onclick = () => { showFile(i); exitGrid(); };
+    container.appendChild(cell);
+  });
+  // Scroll active cell into view
+  requestAnimationFrame(() => {
+    const active = container.querySelector('.grid-active');
+    if (active) active.scrollIntoView({ block: 'center', behavior: 'instant' });
+  });
+}
+
+function updateGridActive() {
+  if (!gridMode) return;
+  const container = document.getElementById('gridContainer');
+  if (!container) return;
+  container.querySelectorAll('.grid-cell').forEach((el, i) => {
+    el.classList.toggle('grid-active', i === idx);
+  });
+  const active = container.querySelector('.grid-active');
+  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function setGridCols(n) {
+  gridCols = Math.max(2, Math.min(10, Math.round(n)));
+  if (isNaN(gridCols)) gridCols = 4;
+  const inp = document.getElementById('gridColsInput');
+  if (inp) inp.value = gridCols;
+  if (gridMode) renderGrid();
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Toast
 ═══════════════════════════════════════════════════════════════ */
 let _tt;
@@ -1768,7 +2577,7 @@ function fmtDuration(s) {
   return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${ss}` : `${m}:${ss}`;
 }
 function fmtBytes(n) {
-  if (!n) return '—';
+  if (!n) return '·';
   if (n < 1024) return n + ' B';
   if (n < 1<<20) return (n/1024).toFixed(1) + ' KB';
   if (n < 1<<30) return (n/1048576).toFixed(1) + ' MB';

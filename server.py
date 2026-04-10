@@ -30,6 +30,36 @@ AUDIO_EXTS = {
 MEDIA_EXTS = IMAGE_EXTS | VIDEO_EXTS | AUDIO_EXTS
 
 PORT = 7432
+MAX_RECURSIVE_FILES = 2000   # safety cap for recursive scans
+
+
+def _find_ffmpeg() -> "str | None":
+    """Return path to ffmpeg binary, or None if not found anywhere."""
+    try:
+        r = subprocess.run(["ffmpeg", "-version"], capture_output=True, timeout=5)
+        if r.returncode == 0:
+            return "ffmpeg"
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
+    if sys.platform == "win32":
+        import glob as _glob
+        # winget places shims here after install; not yet in the process's PATH
+        candidates = [
+            os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Links\ffmpeg.exe"),
+        ]
+        pkg_base = os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Packages")
+        if os.path.isdir(pkg_base):
+            candidates += _glob.glob(
+                os.path.join(pkg_base, "Gyan.FFmpeg*", "**", "bin", "ffmpeg.exe"),
+                recursive=True,
+            )
+        for c in candidates:
+            if os.path.isfile(c):
+                return c
+    return None
+
+
+_ffmpeg_exe: "str | None" = _find_ffmpeg()
 
 
 def _resource(rel_path: str) -> Path:
@@ -94,12 +124,113 @@ def api_open():
     if not path or not os.path.isdir(path):
         return jsonify({"error": f"Folder not found: {path}"}), 400
     src_folder = os.path.abspath(path)
-    return jsonify(_scan())
+    recursive = bool((data or {}).get("recursive", False))
+    offset    = int((data or {}).get("offset", 0))
+    return jsonify(_scan_recursive(offset) if recursive else _scan())
 
 
 @app.route("/api/files")
 def api_files():
     return jsonify(_scan())
+
+
+@app.route("/api/peek")
+def api_peek():
+    """Return the first image file at or after the given total-media offset (recursive scan).
+    Used to preview the thumbnail for the 'Next 2,000' pagination button."""
+    path   = request.args.get("path",   "").strip()
+    offset = int(request.args.get("offset", 0) or 0)
+    if not path or not os.path.isdir(path):
+        return jsonify({"found": False})
+    path = os.path.abspath(path)
+    skipped = 0
+    try:
+        for dirpath, dirnames, filenames in os.walk(path):
+            dirnames[:] = sorted(
+                [d for d in dirnames if not d.startswith('.')],
+                key=lambda n: n.lower(),
+            )
+            for name in sorted(filenames, key=lambda n: n.lower()):
+                ext = os.path.splitext(name)[1].lower()
+                if ext not in MEDIA_EXTS:
+                    continue
+                if skipped < offset:
+                    skipped += 1
+                    continue
+                # Past the offset — return the first image we find
+                if ext in IMAGE_EXTS:
+                    rel_dir = os.path.relpath(dirpath, path)
+                    rel_dir = '' if rel_dir == '.' else rel_dir.replace(os.sep, '/')
+                    rel_path = (rel_dir + '/' + name) if rel_dir else name
+                    return jsonify({"found": True, "path": rel_path})
+                # Non-image media: keep counting but skip for thumbnail purposes
+    except PermissionError:
+        pass
+    return jsonify({"found": False})
+
+
+def _scan_recursive(offset: int = 0) -> dict:
+    """Walk src_folder recursively, returning up to MAX_RECURSIVE_FILES media files
+    starting from *offset* (number of media files to skip)."""
+    if not src_folder or not os.path.isdir(src_folder):
+        return {"files": [], "folder": ""}
+
+    entries = []
+    skipped = 0
+    collected = 0
+
+    try:
+        for dirpath, dirnames, filenames in os.walk(src_folder):
+            # Sort dirs so traversal order is predictable; skip hidden dirs
+            dirnames[:] = sorted(
+                [d for d in dirnames if not d.startswith('.')],
+                key=lambda n: n.lower(),
+            )
+
+            rel_dir = os.path.relpath(dirpath, src_folder)
+            rel_dir = '' if rel_dir == '.' else rel_dir.replace(os.sep, '/')
+
+            for name in sorted(filenames, key=lambda n: n.lower()):
+                ext = os.path.splitext(name)[1].lower()
+                if ext not in MEDIA_EXTS:
+                    continue
+
+                # Skip files before the requested offset
+                if skipped < offset:
+                    skipped += 1
+                    continue
+
+                collected += 1
+                # One past the cap — there are more files; stop here
+                if collected > MAX_RECURSIVE_FILES:
+                    return {
+                        "files": entries,
+                        "folder": src_folder,
+                        "truncated": True,
+                        "offset": offset,
+                    }
+
+                full = os.path.join(dirpath, name)
+                if ext in IMAGE_EXTS:
+                    media_type = "image"
+                elif ext in VIDEO_EXTS:
+                    media_type = "video"
+                else:
+                    media_type = "audio"
+
+                entries.append({
+                    "name":      name,
+                    "subfolder": rel_dir,
+                    "type":      media_type,
+                    "size":      os.path.getsize(full),
+                })
+    except PermissionError as e:
+        return {
+            "files": entries, "folder": src_folder,
+            "error": str(e), "truncated": False, "offset": offset,
+        }
+
+    return {"files": entries, "folder": src_folder, "truncated": False, "offset": offset}
 
 
 def _scan() -> dict:
@@ -208,6 +339,152 @@ def api_undo():
 
     shutil.move(src_path, restore_path)
     return jsonify({"ok": True, "restored_name": os.path.basename(restore_path)})
+
+
+# ─── Strip metadata from media files in a folder ─────────────────────────────
+
+@app.route("/api/strip_metadata", methods=["POST"])
+def strip_metadata():
+    global _ffmpeg_exe
+    data = request.get_json(force=True) or {}
+    folder_path = data.get("path", "").strip()
+    if not folder_path or not os.path.isdir(folder_path):
+        return jsonify({"error": "Folder not found"}), 400
+
+    folder_path = os.path.abspath(folder_path)
+    parent      = os.path.dirname(folder_path)
+    folder_name = os.path.basename(folder_path)
+    dest_name   = folder_name + "_no_metadata"
+    dest_path   = os.path.join(parent, dest_name)
+
+    if ".." in folder_name:
+        return jsonify({"error": "Invalid path"}), 400
+
+    os.makedirs(dest_path, exist_ok=True)
+
+    try:
+        from PIL import Image as PILImage
+        pil_ok = True
+    except ImportError:
+        pil_ok = False
+
+    try:
+        import mutagen as _mutagen
+        mutagen_ok = True
+    except ImportError:
+        mutagen_ok = False
+
+    # Which extensions each method handles
+    IMG_STRIP    = {".jpg", ".jpeg", ".png", ".webp"}
+    MUTAGEN_EXTS = AUDIO_EXTS | {".mp4", ".m4v"}        # pure-Python, no external tool
+    FFMPEG_EXTS  = VIDEO_EXTS - {".mp4", ".m4v"}         # needs ffmpeg binary
+
+    stripped       = 0
+    ffmpeg_skipped = 0
+    errors         = []
+
+    for name in sorted(os.listdir(folder_path)):
+        src = os.path.join(folder_path, name)
+        if not os.path.isfile(src):
+            continue
+        ext = os.path.splitext(name)[1].lower()
+        if ext not in MEDIA_EXTS:
+            continue
+        dst = os.path.join(dest_path, name)
+
+        if pil_ok and ext in IMG_STRIP:
+            # Re-save via Pillow — strips all embedded metadata silently
+            try:
+                with PILImage.open(src) as img:
+                    fmt = (img.format or ext.lstrip(".").upper()).upper()
+                    if fmt in ("JPEG", "JPG"):
+                        img.convert("RGB").save(dst, format="JPEG", quality=95)
+                    elif fmt == "PNG":
+                        img.copy().save(dst, format="PNG")
+                    elif fmt == "WEBP":
+                        img.copy().save(dst, format="WEBP", quality=90)
+                    else:
+                        img.copy().save(dst)
+                stripped += 1
+            except Exception as exc:
+                errors.append(f"{name}: {exc}")
+
+        elif mutagen_ok and ext in MUTAGEN_EXTS:
+            # Copy then wipe tags in-place with mutagen (no external tool needed)
+            try:
+                import mutagen as _mutagen
+                shutil.copy2(src, dst)
+                f = _mutagen.File(dst, easy=False)
+                if f is not None:
+                    f.delete()
+                stripped += 1
+            except Exception as exc:
+                errors.append(f"{name}: {exc}")
+
+        elif _ffmpeg_exe and ext in FFMPEG_EXTS:
+            # Strip container metadata with ffmpeg, no re-encode
+            try:
+                result = subprocess.run(
+                    [_ffmpeg_exe, "-y", "-i", src,
+                     "-map_metadata", "-1", "-c", "copy", dst],
+                    capture_output=True, timeout=300,
+                )
+                if result.returncode == 0:
+                    stripped += 1
+                else:
+                    errors.append(f"{name}: ffmpeg exit {result.returncode}")
+            except Exception as exc:
+                errors.append(f"{name}: {exc}")
+
+        elif ext in FFMPEG_EXTS:
+            # ffmpeg not available — skip rather than copy with metadata intact
+            ffmpeg_skipped += 1
+
+        # Remaining IMAGE_EXTS (gif, bmp, tiff, svg, etc.) skipped per same policy
+
+    return jsonify({
+        "ok":             True,
+        "dest":           dest_path,
+        "dest_name":      dest_name,
+        "stripped":       stripped,
+        "ffmpeg_skipped": ffmpeg_skipped,
+        "ffmpeg_ok":      bool(_ffmpeg_exe),
+        "errors":         errors[:10],
+    })
+
+
+# ─── Install ffmpeg via winget ───────────────────────────────────────────────
+
+@app.route("/api/install_ffmpeg", methods=["POST"])
+def install_ffmpeg():
+    global _ffmpeg_exe
+    try:
+        subprocess.run(
+            ["winget", "install", "--id", "Gyan.FFmpeg", "-e",
+             "--accept-package-agreements", "--accept-source-agreements",
+             "--scope", "user"],
+            capture_output=True, text=True, timeout=300,
+        )
+    except FileNotFoundError:
+        return jsonify({
+            "ok": False,
+            "error": "Windows Package Manager (winget) was not found on this system. "
+                     "Please download ffmpeg manually from ffmpeg.org.",
+        }), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"ok": False, "error": "Installation timed out. Please try again or install manually."}), 500
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+    _ffmpeg_exe = _find_ffmpeg()
+    if not _ffmpeg_exe:
+        return jsonify({
+            "ok": False,
+            "error": "ffmpeg was installed but could not be located automatically. "
+                     "Please restart Sift and try again.",
+        }), 500
+
+    return jsonify({"ok": True})
 
 
 # ─── Serve media files (supports HTTP Range for video seeking) ───────────────

@@ -1,0 +1,157 @@
+SIFT v6 — CHANGELOG
+Session: April 2026
+================================================================================
+
+NEW FEATURES
+--------------------------------------------------------------------------------
+
+Grid Display
+  - New "Grid Display" control box added to the right panel, above Slideshow.
+  - Click the Grid button to open a full-window grid showing all loaded images
+    at once. No borders between images.
+  - Adjustable column count (2–10) via number input and arrow buttons.
+  - Click any image in the grid to jump to it and close the grid.
+  - Grid is not a true fullscreen takeover. It fills the browser window only,
+    so the OS taskbar and window chrome remain accessible.
+  - Close button (X) fixed in the top-right corner of the grid.
+  - Currently selected image is highlighted with an accent-colored border.
+    Navigating with arrow keys while in grid mode updates the highlight.
+
+Grid Autoscroll
+  - A scroll control panel appears below the X button in grid mode.
+  - Play/stop button (triangle/square icons) starts and stops autoscroll.
+  - Vertical speed slider controls scroll speed. Dragging up = faster,
+    dragging down = slower. The slider never stops scrolling on its own;
+    only the stop button stops it.
+  - Autoscroll loops back to the top when it reaches the bottom.
+  - Autoscroll stops automatically when the grid is closed.
+  - Custom slider implementation (no native range input) to eliminate
+    browser dead zones at the ends of the track.
+
+Light and Dark Mode
+  - New "Theme" toggle in the right panel, below Display on Launch.
+  - Two buttons: Dark (default) and Light.
+  - Light mode applies a full set of CSS variable overrides via an
+    html.light class. All UI elements respond to the theme including
+    the topbar, panels, filmstrip, buttons, and sort destinations.
+  - Theme preference is saved to localStorage and applied immediately
+    on next launch with no flash (inline script in <head> applies the
+    class before the page renders).
+  - Sort destination buttons use semi-transparent color tints in light
+    mode with darker, readable text. Dark mode restores the original
+    deep dark gradient fills.
+  - Nav arrows and topbar buttons use CSS variables instead of hardcoded
+    dark colors, so they render correctly in both themes.
+  - Get Started and Strip Metadata topbar buttons use theme-aware classes
+    (tbtn-green, tbtn-red) instead of inline color styles.
+
+Copy Path Button
+  - A "Copy Path" button appears in the status bar, centered directly
+    below the highlighted thumbnail in the filmstrip.
+  - Clicking it copies the full absolute file path of the currently
+    displayed file to the clipboard (Windows path format with backslashes).
+  - Button flashes "Copied!" for 1.2 seconds on success.
+  - Button has a yellow (accent) border to stand out.
+  - Button is hidden until a folder is loaded and a file is displayed.
+
+Pagination Preview (Next 2,000 Hover Thumbnail)
+  - When more than 2,000 images are loaded and the Next 2,000 button
+    is visible in the filmstrip, hovering over it shows a thumbnail
+    preview of the first image that would be loaded in the next chunk.
+  - Preview is fetched via a new /api/peek server endpoint that walks
+    the folder from the given offset and returns the first image found.
+  - The filmstrip track no longer scrolls behind the Next 2,000 button.
+    An opaque wall element blocks the track at the button's left edge.
+
+
+FIXES AND IMPROVEMENTS
+--------------------------------------------------------------------------------
+
+Startup "Last Folder" Fix
+  - Fixed a critical bug where the DOMContentLoaded async handler was
+    silently crashing before reaching the loadFolder call on startup.
+  - Root cause: _syncSubfoldersUI() was called but never defined,
+    throwing a ReferenceError that aborted the entire init function.
+  - Replaced the call with inline button state sync logic.
+  - The "Last Folder" on launch setting now works correctly.
+
+Include Subfolders Persistence
+  - The "Include Subfolders" state is now saved to localStorage
+    (key: ms_subfolders).
+  - On startup with "Last Folder" mode, the folder is reloaded with the
+    same recursive setting used in the previous session.
+  - Previously, the app always defaulted to non-recursive on startup,
+    causing "No media files found" errors for subfolder-based sessions.
+
+Default Settings for First-Time Users
+  - Theme defaults to Dark (was implicitly dark but not explicitly set).
+  - Display on Launch defaults to Blank (was previously Last Folder).
+  - Both settings are only applied on first run; user changes persist.
+
+Fullscreen Transition Suppression
+  - Added :fullscreen and :-webkit-full-screen CSS rules with
+    transition: none and animation: none to suppress the browser's
+    built-in fade animation when entering fullscreen mode.
+  - Previously only ::backdrop was suppressed; the fullscreen element
+    itself still faded in.
+
+ffmpeg Install Modal Arrow Icon
+  - The download arrow icon in the "Install automatically" button was
+    too small and resembled the letter I at small sizes.
+  - Replaced with an inline SVG arrow (vertical line with chevron),
+    which renders at a fixed pixel size regardless of font rendering.
+
+Em Dash Removal
+  - All em dashes (.) removed from the entire application including
+    sift.html, ffmpeg_install_msg.html, and README.md.
+  - Replaced with periods. Sentences that started after an em dash
+    were capitalized appropriately.
+  - Affected locations: status bar text, guide descriptions, comments,
+    toast messages, button labels, README feature list, and modal copy.
+
+
+DOCUMENTATION AND COPY UPDATES
+--------------------------------------------------------------------------------
+
+Get Started Guide
+  - "Optional extras" section renamed to "Additional Features".
+  - New entries added for: Grid view, Copy Path, Light and dark mode,
+    Display on Launch.
+  - Step 1 (Open a folder) updated to explain the Include Subfolders
+    option and the 2,000-file chunk loading behavior.
+  - Features reordered to match the top-to-bottom order they appear
+    in the right panel: Strip Metadata, Grid, Slideshow, Fullscreen,
+    Playback Speed, Display on Launch, Theme, Copy Path.
+  - Strip Metadata description updated to explain why you'd want it:
+    GPS location tags, camera make/model, timestamps, and other
+    personally identifying information embedded silently in media files.
+  - Strip Metadata description corrected to accurately describe the
+    ffmpeg flow: Sift prompts to install automatically via Windows
+    Package Manager, or lets you skip video files for now.
+  - ffmpeg modal copy updated: "Sift just needs it installed. You don't
+    have to do anything with it yourself."
+
+README.md
+  - Title updated.
+  - "Additional Features" section added covering Strip Metadata,
+    Grid view, Slideshow, Display on Launch, Light and dark mode,
+    and Copy Path.
+  - All em dashes removed and replaced with periods.
+  - Strip Metadata bullet updated to mention GPS tags, privacy
+    implications, and the ffmpeg auto-install prompt.
+
+
+SERVER (server.py)
+--------------------------------------------------------------------------------
+
+New /api/peek Endpoint
+  - GET endpoint that accepts a folder path and media offset as query
+    parameters.
+  - Walks the folder recursively (same traversal order as /api/open)
+    from the given offset and returns the relative path of the first
+    image file found.
+  - Used by the frontend to pre-fetch the hover thumbnail for the
+    Next 2,000 pagination button.
+  - Returns { found: true, path: "..." } or { found: false }.
+
+================================================================================
