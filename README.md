@@ -2,6 +2,9 @@
 
 Sift is a fast, no-fuss media sorting tool for Windows. Open a folder of images, videos, or audio files, set up your destinations, and move through them one by one with a single keypress. Built for the moment you realize you have gigabytes of unsorted media and just need to get through it.
 <img width="2556" height="1384" alt="sift_preview_image_1" src="https://github.com/user-attachments/assets/8d2e409e-afeb-4cda-b700-39f25fdad6fa" />
+Grid Mode View:
+<img width="2558" height="1392" alt="image" src="https://github.com/user-attachments/assets/2d2def26-7a01-4cec-bbd2-d9df089daf3e" />
+
 
 ---
 
