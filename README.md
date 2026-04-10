@@ -4,6 +4,8 @@ Sift is a fast, no-fuss media sorting tool for Windows. Open a folder of images,
 <img width="2556" height="1384" alt="sift_preview_image_1" src="https://github.com/user-attachments/assets/8d2e409e-afeb-4cda-b700-39f25fdad6fa" />
 Grid Mode View:
 <img width="2558" height="1392" alt="image" src="https://github.com/user-attachments/assets/2d2def26-7a01-4cec-bbd2-d9df089daf3e" />
+Light Mode:
+<img width="2556" height="1390" alt="image" src="https://github.com/user-attachments/assets/bb4efde7-6268-4f9d-b6de-e92e278a154f" />
 
 
 ---
